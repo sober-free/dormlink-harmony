@@ -71,14 +71,14 @@ def arrow(d, p1, p2, color=ARROW, w=2):
 
 def badge(d, y):
     rbox(d, (1160, y + 16, 1350, y + 48), ACC_BG, ACC_B, w=2, r=8)
-    ctext(d, (1160, y + 16, 1350, y + 48), '★ 本人负责', FTAG, ACC)
+    ctext(d, (1160, y + 16, 1350, y + 48), '★ 徐豪已完成', FTAG, ACC)
 
 
 def build_architecture():
     img = Image.new('RGB', (1400, 950), BG)
     d = ImageDraw.Draw(img)
     d.text((60, 26), '图2.1  系统架构图 — DormLink 智宿联动实验室', font=FT, fill=TITLE)
-    d.text((60, 72), '★ 橙色标记 = 本人（徐豪 / GitHub: sober-free）负责；本项目独立完成全部模块，含设计、编码、集成、测试与交付',
+    d.text((60, 72), '★ 橙色标记 = 徐豪当前已完成模块；钱志刚（qianzhigang-free）已加入组队协作，具体分工待确认',
            font=FS, fill=SUB)
 
     def layer(y1, y2, title, boxes, bx_y, box_h):
@@ -137,7 +137,7 @@ def build_architecture():
 def build_flow():
     img = Image.new('RGB', (1200, 1200), BG)
     d = ImageDraw.Draw(img)
-    d.text((50, 24), '图3.1  规则引擎业务流程图（本人负责的核心业务）', font=FT, fill=TITLE)
+    d.text((50, 24), '图3.1  规则引擎业务流程图（当前已实现的核心业务）', font=FT, fill=TITLE)
     d.text((50, 68), '从用户操作到设备联动、冲突裁决、界面刷新与落盘的完整状态变化', font=FS, fill=SUB)
 
     def step(y, head, body, fill=BOX, outline=BOX_B):

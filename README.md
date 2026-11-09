@@ -2,7 +2,8 @@
 
 > 《鸿蒙高级应用开发工程师认证》期末大作业 · 主题三「联动实验室：智能宿舍自动化规则编排 App」
 >
-> **作者**：徐豪（20230313120，23物联1）　**GitHub 账号**：`sober-free`
+> **项目成员**：徐豪（20230313120，23物联1，GitHub：`sober-free`）；钱志刚（20230313113，23物联1，GitHub：`qianzhigang-free`）
+> **协作状态**：已切换为两人组队。当前 34 次历史提交均由 `sober-free` 完成；钱志刚已加入仓库协作，须在本人账号下完成后续实际代码与测试提交后，才计入其个人贡献。
 > **仓库**：https://github.com/sober-free/dormlink-harmony
 
 ![系统架构图](docs/系统架构图.png)
@@ -39,7 +40,18 @@
 - **演练**：4 组预设场景一键载入并执行；出现冲突时显示胜出/被拦截规则，并提供「一键修复：为高温制冷补充『有人在室』条件」验证冲突消除。
 - **日志**：执行时间线（序号、优先级、条件快照、设备变化）、冲突记录、引擎告警、存档时间、清空记录与恢复出厂方案。
 
-## 3. 开发环境
+## 3. 两人协作与提交要求
+
+项目现为两人组队，按后续工作量约 **50% / 50%** 分工；历史提交不会被重写或重新归属。
+
+| 成员 | 后续 50% 主线 | 验收要求 |
+| --- | --- | --- |
+| 徐豪 / `sober-free` | 业务与集成：规则/场景/持久化结构维护、跨模块集成、最终回归 | 本人账号提交业务或集成代码；维护至少 3 条自动化用例；完成合并验证 |
+| 钱志刚 / `qianzhigang-free` | 交互与验证：ArkUI 设备控制增强、资源/可访问性优化、运行证据、独立测试复核 | 本人账号提交实际代码或资源；至少 3 条自动化测试（正常/边界/异常各 ≥1）；保留复现证据 |
+
+截至本 README 更新：仓库已有 34 次提交均来自 `sober-free`，钱志刚已具备协作者权限但尚未产生可计入的提交。后续仅以本人账号的实际提交和测试证据确认个人贡献。
+
+## 4. 开发环境
 
 | 项目 | 版本/说明 |
 | --- | --- |
@@ -53,7 +65,7 @@
 
 > 若本机 DevEco 的 SDK 版本不同，修改根 `build-profile.json5` 中的 `compatibleSdkVersion` / `targetSdkVersion` 后 Sync 即可。
 
-## 4. 目录结构
+## 5. 目录结构
 
 ```
 dormlink-harmony/
@@ -80,9 +92,9 @@ dormlink-harmony/
 └── build-profile.json5 / hvigorfile.ts / oh-package.json5
 ```
 
-★ 为本人（徐豪 / `sober-free`）独立完成的模块。
+★ 标记当前已完成实现模块（截至 2026-11-09，现有 34 次 Git 提交均由徐豪 / `sober-free` 提交）。项目后续按两人 50% / 50% 目标协作：钱志刚 / `qianzhigang-free` 负责后续界面与设备控制增强、独立测试复核及证据整理，须通过本人账号提交实际代码后计入贡献。
 
-## 5. 运行方法
+## 6. 运行方法
 
 1. 打开 DevEco Studio → `File > Open`，选择本仓库根目录 `dormlink-harmony`。
 2. 等待 `Sync` / `ohpm install` 完成；如提示签名，使用 `File > Project Structure > Signing Configs` 开启自动签名。
@@ -98,14 +110,14 @@ dormlink-harmony/
    node --test tests/node/rule-engine.test.mjs
    ```
 
-## 6. 自动化测试与证据
+## 7. 自动化测试与证据
 
 - `tests/node/rule-engine.test.mjs`：19 条，`node --test` 实测 **19 通过 / 0 失败**，完整 TAP 输出见 [`docs/测试运行日志.md`](docs/测试运行日志.md)。
 - `entry/src/ohosTest/ets/test/RuleEngine.test.ets`：14 条 `@ohos/hypium` 用例，在 DevEco Studio 中右键 `ohosTest` → `Run 'Tests in entry'` 执行。
 - 测试直接 import `entry/src/main/ets/engine/RuleEngine.ts`，即应用实际运行的那份源码，**没有另写模拟实现**。
 - 三类覆盖：正常 7 / 边界 5 / 异常 7（Node 侧），详见需求说明书第 7 节。
 
-## 7. 运行截图与演示视频
+## 8. 运行截图与演示视频
 
 在 DevEco Studio 的 **Huawei_Phone 模拟器（HarmonyOS 5.0.5 / API 17）** 上实际编译、安装、运行后采集，全部位于 [`screenshots/`](screenshots/)：
 
@@ -126,7 +138,7 @@ dormlink-harmony/
 
 **诚实说明**：`demo-recording.mp4` 是模拟器连续截帧后合成的视频——该模拟器镜像不含系统录屏应用，官方录屏链路仅支持真机，故按替代方案产出。`docs/系统架构图.png`、`docs/业务流程图.png` 是设计示意图，不是运行截图。
 
-## 8. 设计规范（Design System）
+## 9. 设计规范（Design System）
 
 完整规范见 [`docs/设计规范.md`](docs/设计规范.md)，所有视觉数值的唯一来源是 `entry/src/main/ets/common/DesignTokens.ets`。
 
@@ -146,13 +158,13 @@ grep -nE "'#[0-9A-Fa-f]{6}'" entry/src/main/ets/pages/Index.ets   # 应无输出
 grep -nE "\.fontSize\([0-9]+\)" entry/src/main/ets/pages/Index.ets # 应无输出
 ```
 
-## 9. 持久化与异常处理
+## 10. 持久化与异常处理
 
 - 存储：`preferences.getPreferences(context, 'dormlink_state')`，键 `snapshot`（完整 JSON）与 `saved_at`；每次变更 `put → flush` 立即落盘。
 - 恢复：`Index.aboutToAppear()` 异步调用 `DormStore.restore()`；存储不可用、无存档、JSON 损坏或字段缺失时安全回退默认方案，并在界面显示原因。
 - 引擎侧：越界数值裁剪、NaN/非法规则校验、未知设备忽略、null 输入降级，全部写入 `warnings` 展示在日志页。
 
-## 10. 交付信息
+## 11. 交付信息
 
 | 项目 | 内容 |
 | --- | --- |
