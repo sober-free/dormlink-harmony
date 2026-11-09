@@ -61,6 +61,7 @@ dormlink-harmony/
 ├── entry/src/main/
 │   ├── ets/entryability/           EntryAbility.ets（窗口与页面加载）
 │   ├── ets/pages/Index.ets         ★ 四个页签 UI、@State 状态管理、规则编辑器
+│   ├── ets/common/DesignTokens.ets  ★ 设计规范 Token（颜色/字号/间距/圆角/尺寸）
 │   ├── ets/engine/RuleEngine.ts    ★ 规则引擎（纯逻辑，不依赖 HarmonyOS API）
 │   ├── ets/engine/DefaultData.ts   ★ 默认设备 / 6 条规则 / 4 组场景
 │   ├── ets/viewmodel/DormStore.ets ★ 内存态 ↔ 持久化快照、恢复降级
@@ -71,6 +72,7 @@ dormlink-harmony/
 ├── docs/
 │   ├── 软件需求说明书.md           ★ 需求、数据模型、接口、分工、测试、验收
 │   ├── 测试运行日志.md             ★ 真实命令输出（19/19 通过）
+│   ├── 设计规范.md                 ★ Design System：Token、组件、布局、自查清单
 │   ├── 运行与录屏指南.md           导入/编译/截图/录屏分镜
 │   ├── 系统架构图.png              架构示意图
 │   └── 业务流程图.png              规则引擎执行流程图
@@ -124,13 +126,33 @@ dormlink-harmony/
 
 **诚实说明**：`demo-recording.mp4` 是模拟器连续截帧后合成的视频——该模拟器镜像不含系统录屏应用，官方录屏链路仅支持真机，故按替代方案产出。`docs/系统架构图.png`、`docs/业务流程图.png` 是设计示意图，不是运行截图。
 
-## 8. 持久化与异常处理
+## 8. 设计规范（Design System）
+
+完整规范见 [`docs/设计规范.md`](docs/设计规范.md)，所有视觉数值的唯一来源是 `entry/src/main/ets/common/DesignTokens.ets`。
+
+| 维度 | 内容 |
+| --- | --- |
+| 色彩 | 21 个语义 Token：背景 5 层、边框 2 级、文字 4 级、品牌 4 个、状态 6 个 |
+| 字体 | 6 级阶梯 19 / 17 / 15 / 13 / 12 / 11，字重仅 Regular 与 Medium |
+| 间距 | 4px 基准：4 / 8 / 12 / 16 / 20 / 28 |
+| 圆角 | 6 / 10 / 14 / pill |
+| 组件 | 按钮 4 类、卡片、状态标签、滑块、开关、输入框、Toast 的尺寸与状态规范 |
+| 布局 | 页面边距 16、卡片间距 12、卡片内边距 16、滚动底部留白 80 |
+
+落地效果：`Index.ets` 中**硬编码颜色 0 处、硬编码字号 0 处**，全部替换为 Token 引用（Color 133 / Font 82 / Space 38 / Radius 15 处）。自查命令：
+
+```bash
+grep -nE "'#[0-9A-Fa-f]{6}'" entry/src/main/ets/pages/Index.ets   # 应无输出
+grep -nE "\.fontSize\([0-9]+\)" entry/src/main/ets/pages/Index.ets # 应无输出
+```
+
+## 9. 持久化与异常处理
 
 - 存储：`preferences.getPreferences(context, 'dormlink_state')`，键 `snapshot`（完整 JSON）与 `saved_at`；每次变更 `put → flush` 立即落盘。
 - 恢复：`Index.aboutToAppear()` 异步调用 `DormStore.restore()`；存储不可用、无存档、JSON 损坏或字段缺失时安全回退默认方案，并在界面显示原因。
 - 引擎侧：越界数值裁剪、NaN/非法规则校验、未知设备忽略、null 输入降级，全部写入 `warnings` 展示在日志页。
 
-## 9. 交付信息
+## 10. 交付信息
 
 | 项目 | 内容 |
 | --- | --- |

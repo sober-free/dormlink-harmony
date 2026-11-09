@@ -10,6 +10,7 @@ import {
 } from '../engine/DefaultData';
 import { DormStore, AppSnapshot, RestoreResult } from '../viewmodel/DormStore';
 import { StorageService } from '../repository/StorageService';
+import { ColorToken, FontToken, SpaceToken, RadiusToken, SizeToken } from '../common/DesignTokens';
 
 const METRIC_KEYS: MetricKey[] = ['temperature', 'illuminance', 'humidity', 'hour', 'occupancy'];
 const METRIC_TEXTS: string[] = ['温度', '光照', '湿度', '时段', '在室'];
@@ -497,23 +498,23 @@ struct Index {
       Row() {
         Column() {
           Text('DormLink 智宿联动实验室')
-            .fontSize(19).fontWeight(FontWeight.Bold).fontColor('#E6F1FB')
+            .fontSize(FontToken.display).fontWeight(FontWeight.Bold).fontColor(ColorToken.textPrimary)
           Text('智能宿舍自动化规则编排 · 主题三')
-            .fontSize(12).fontColor('#9FB3C8').margin({ top: 2 })
+            .fontSize(FontToken.label).fontColor(ColorToken.textSecondary).margin({ top: 2 })
         }.alignItems(HorizontalAlign.Start).layoutWeight(1)
         Column() {
           Text(this.restored ? '已恢复存档' : (this.savedAt > 0 ? '已保存方案' : '当前方案'))
-            .fontSize(11).fontColor(this.restored || this.savedAt > 0 ? '#6FD3A8' : '#F5B971')
+            .fontSize(FontToken.caption).fontColor(this.restored || this.savedAt > 0 ? ColorToken.success : ColorToken.warning)
           Text('存档 ' + this.formatTime(this.savedAt))
-            .fontSize(11).fontColor('#9FB3C8').margin({ top: 2 })
+            .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
         }.alignItems(HorizontalAlign.End)
       }.width('100%')
       Text(this.restoreMessage)
-        .fontSize(11).fontColor('#9FB3C8').margin({ top: 8 })
+        .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 8 })
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 14, bottom: 10 })
-    .backgroundColor('#132238')
+    .backgroundColor(ColorToken.surfaceHigh)
   }
 
   /** 直接从 @State 读取环境量：@Builder 的值传递参数不会随状态刷新，必须走 this */
@@ -531,13 +532,13 @@ struct Index {
   MetricSlider(label: string, key: MetricKey, min: number, max: number, step: number, unit: string) {
     Column() {
       Row() {
-        Text(label).fontSize(13).fontColor('#C9D8E8').layoutWeight(1)
-        Text(this.envValue(key).toString() + unit).fontSize(13).fontColor('#4FC3E8')
+        Text(label).fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+        Text(this.envValue(key).toString() + unit).fontSize(FontToken.body).fontColor(ColorToken.accent)
       }.width('100%')
       Slider({ value: this.envValue(key), min: min, max: max, step: step, style: SliderStyle.OutSet })
         .width('100%')
-        .trackColor('#2C435C')
-        .selectedColor('#4FC3E8')
+        .trackColor(ColorToken.borderStrong)
+        .selectedColor(ColorToken.accent)
         .onChange((v: number, mode: SliderChangeMode) => {
           const nv = Math.round(v);
           if (nv === this.envValue(key)) {
@@ -555,42 +556,42 @@ struct Index {
   DeviceCard(d: DeviceState) {
     Row() {
       Column() {
-        Text(d.name).fontSize(15).fontColor('#E6F1FB')
+        Text(d.name).fontSize(FontToken.heading).fontColor(ColorToken.textPrimary)
         Text(d.power ? '运行中 · ' + d.value.toString() + d.unit : '已关闭')
-          .fontSize(12).fontColor(d.power ? '#6FD3A8' : '#8497AC').margin({ top: 3 })
+          .fontSize(FontToken.label).fontColor(d.power ? ColorToken.success : ColorToken.textTertiary).margin({ top: 3 })
       }.alignItems(HorizontalAlign.Start).layoutWeight(1)
       Text(d.power ? 'ON' : 'OFF')
-        .fontSize(12).fontColor(d.power ? '#6FD3A8' : '#8497AC')
+        .fontSize(FontToken.label).fontColor(d.power ? ColorToken.success : ColorToken.textTertiary)
         .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-        .backgroundColor(d.power ? '#1C4038' : '#22334A').borderRadius(10)
+        .backgroundColor(d.power ? ColorToken.successBg : ColorToken.border).borderRadius(RadiusToken.md)
     }
-    .width('100%').padding(14).backgroundColor('#16263B').borderRadius(12)
+    .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
   }
 
   @Builder
   DashboardPanel() {
     Scroll() {
-      Column({ space: 12 }) {
-        Text('模拟环境（可直接调整）').fontSize(15).fontColor('#E6F1FB')
-        Column({ space: 10 }) {
+      Column({ space: SpaceToken.md }) {
+        Text('模拟环境（可直接调整）').fontSize(FontToken.heading).fontColor(ColorToken.textPrimary).width('100%')
+        Column({ space: SpaceToken.md }) {
           this.MetricSlider('温度', 'temperature', -10, 50, 1, '℃')
           this.MetricSlider('光照', 'illuminance', 0, 2000, 20, ' lux')
           this.MetricSlider('湿度', 'humidity', 0, 100, 1, '%')
           this.MetricSlider('时段', 'hour', 0, 23, 1, ' 点')
           Row() {
-            Text('宿舍在室状态').fontSize(13).fontColor('#C9D8E8').layoutWeight(1)
-            Text(this.env.occupancy ? '有人' : '无人').fontSize(13).fontColor('#4FC3E8')
+            Text('宿舍在室状态').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+            Text(this.env.occupancy ? '有人' : '无人').fontSize(FontToken.body).fontColor(ColorToken.accent)
             Toggle({ type: ToggleType.Switch, isOn: this.env.occupancy })
               .onChange((on: boolean) => { this.setOccupancy(on); })
           }.width('100%')
-        }.width('100%').padding(14).backgroundColor('#16263B').borderRadius(12)
+        }.width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
 
-        Row({ space: 10 }) {
+        Row({ space: SpaceToken.md }) {
           Button('执行联动演练')
-            .fontSize(14).layoutWeight(1).backgroundColor('#2E7FB8')
+            .fontSize(FontToken.heading).layoutWeight(1).backgroundColor(ColorToken.brand)
             .onClick(() => { this.runOnce(); })
           Button('重置环境')
-            .fontSize(13).backgroundColor('#2C435C')
+            .fontSize(FontToken.body).backgroundColor(ColorToken.borderStrong)
             .onClick(() => {
               this.env = normalizeEnvironment(DEFAULT_ENVIRONMENT);
               this.activeScene = '';
@@ -600,21 +601,21 @@ struct Index {
         }.width('100%')
 
         Column() {
-          Text('本次演练结果').fontSize(14).fontColor('#E6F1FB')
+          Text('本次演练结果').fontSize(FontToken.heading).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
           Text('触发规则 ' + this.triggered.length + ' 条 · 执行动作 ' + this.executedCount +
                ' 个 · 冲突拦截 ' + this.blockedCount + ' 个')
-            .fontSize(12).fontColor('#C9D8E8').margin({ top: 6 })
+            .fontSize(FontToken.label).fontColor(ColorToken.textPrimary).margin({ top: 6 })
           Text('触发顺序：' + (this.triggered.length > 0 ? this.triggered.join(' → ') : '暂无'))
-            .fontSize(12).fontColor('#4FC3E8').margin({ top: 4 })
+            .fontSize(FontToken.label).fontColor(ColorToken.accent).margin({ top: 4 })
         }
-        .width('100%').padding(14).backgroundColor('#16263B').borderRadius(12)
+        .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
         .alignItems(HorizontalAlign.Start)
 
-        Text('设备实时状态').fontSize(15).fontColor('#E6F1FB')
+        Text('设备实时状态').fontSize(FontToken.heading).fontColor(ColorToken.textPrimary).width('100%')
         ForEach(this.devices, (d: DeviceState) => {
           this.DeviceCard(d)
         }, (d: DeviceState) => d.id + '|' + (d.power ? '1' : '0') + '|' + d.value.toString())
-      }.padding(16)
+      }.padding({ left: SpaceToken.lg, right: SpaceToken.lg, top: SpaceToken.lg, bottom: 80 })
     }.layoutWeight(1)
   }
 
@@ -624,107 +625,107 @@ struct Index {
       Row() {
         Column() {
           Text(r.id + '  ' + r.name)
-            .fontSize(15).fontColor(r.enabled ? '#E6F1FB' : '#7E90A5')
+            .fontSize(FontToken.heading).fontColor(r.enabled ? ColorToken.textPrimary : ColorToken.textTertiary)
           Text('优先级 ' + r.priority + ' · ' + (r.enabled ? '已启用' : '已停用') + ' · ' +
                r.conditions.length + ' 个条件')
-            .fontSize(11).fontColor('#9FB3C8').margin({ top: 3 })
+            .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 3 })
         }.alignItems(HorizontalAlign.Start).layoutWeight(1)
         Toggle({ type: ToggleType.Switch, isOn: r.enabled })
           .onChange((on: boolean) => { this.toggleRule(r.id, on); })
       }.width('100%')
       Text('当 ' + this.conditionText(r))
-        .fontSize(12).fontColor('#4FC3E8').margin({ top: 10 })
+        .fontSize(FontToken.label).fontColor(ColorToken.accent).margin({ top: 10 })
       Text('则 ' + this.actionText(r))
-        .fontSize(12).fontColor('#B8CDDF').margin({ top: 4 })
+        .fontSize(FontToken.label).fontColor(ColorToken.textSecondary).margin({ top: 4 })
       Text(r.description)
-        .fontSize(11).fontColor('#8497AC').margin({ top: 6 })
-      Row({ space: 10 }) {
-        Button('编辑').fontSize(12).backgroundColor('#2C435C')
+        .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 6 })
+      Row({ space: SpaceToken.md }) {
+        Button('编辑').fontSize(FontToken.label).backgroundColor(ColorToken.borderStrong)
           .onClick(() => { this.openEditor(r); })
-        Button('删除').fontSize(12).backgroundColor('#5A2B33')
+        Button('删除').fontSize(FontToken.label).backgroundColor(ColorToken.dangerBg)
           .onClick(() => { this.deleteRule(r.id); })
       }.margin({ top: 12 })
     }
-    .width('100%').padding(14).backgroundColor('#16263B').borderRadius(12)
+    .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   RulePanel() {
     Scroll() {
-      Column({ space: 12 }) {
+      Column({ space: SpaceToken.md }) {
         Row() {
           Text('联动规则（' + this.rules.length + ' 条）')
-            .fontSize(15).fontColor('#E6F1FB').layoutWeight(1)
-          Button('+ 新增规则').fontSize(13).backgroundColor('#2E7FB8')
+            .fontSize(FontToken.heading).fontColor(ColorToken.textPrimary).layoutWeight(1)
+          Button('+ 新增规则').fontSize(FontToken.body).backgroundColor(ColorToken.brand)
             .onClick(() => { this.openNewEditor(); })
         }.width('100%')
         Text('规则按「优先级数值」从小到大顺序执行；同一设备同时被多条规则控制时，高优先级规则胜出，低优先级动作被拦截并记入冲突日志。')
-          .fontSize(11).fontColor('#9FB3C8')
+          .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
         if (this.rules.length === 0) {
-          Text('暂无规则，请点击右上角新增').fontSize(13).fontColor('#8497AC')
+          Text('暂无规则，请点击右上角新增').fontSize(FontToken.body).fontColor(ColorToken.textTertiary)
         }
         ForEach(this.rules, (r: AutomationRule) => {
           this.RuleCard(r)
         }, (r: AutomationRule) => r.id + '|' + (r.enabled ? '1' : '0') + '|' + r.priority.toString())
-      }.padding(16)
+      }.padding({ left: SpaceToken.lg, right: SpaceToken.lg, top: SpaceToken.lg, bottom: 80 })
     }.layoutWeight(1)
   }
 
   @Builder
   SceneCard(s: ScenePreset) {
     Column() {
-      Text(s.id + ' · ' + s.name).fontSize(15).fontColor('#E6F1FB')
+      Text(s.id + ' · ' + s.name).fontSize(FontToken.heading).fontColor(ColorToken.textPrimary)
       Text('温度 ' + s.env.temperature + '℃   光照 ' + s.env.illuminance + 'lux   湿度 ' +
            s.env.humidity + '%   ' + s.env.hour + '点   ' + (s.env.occupancy ? '有人' : '无人'))
-        .fontSize(11).fontColor('#9FB3C8').margin({ top: 6 })
-      Text(s.note).fontSize(11).fontColor('#F5B971').margin({ top: 6 })
-      Button('载入并演练').fontSize(13).backgroundColor('#2E7FB8').margin({ top: 10 })
+        .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 6 })
+      Text(s.note).fontSize(FontToken.caption).fontColor(ColorToken.warning).margin({ top: 6 })
+      Button('载入并演练').fontSize(FontToken.body).backgroundColor(ColorToken.brand).margin({ top: 10 })
         .onClick(() => { this.applyScene(s); })
     }
-    .width('100%').padding(14).backgroundColor('#16263B').borderRadius(12)
+    .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   ScenePanel() {
     Scroll() {
-      Column({ space: 12 }) {
+      Column({ space: SpaceToken.md }) {
         Text('模拟演练场景（4 组，点击即载入环境并执行）')
-          .fontSize(15).fontColor('#E6F1FB')
+          .fontSize(FontToken.heading).fontColor(ColorToken.textPrimary)
         ForEach(SCENE_PRESETS, (s: ScenePreset) => {
           this.SceneCard(s)
         }, (s: ScenePreset) => s.id)
         if (this.activeScene.length > 0) {
-          Text('当前场景：' + this.activeScene).fontSize(13).fontColor('#4FC3E8')
+          Text('当前场景：' + this.activeScene).fontSize(FontToken.body).fontColor(ColorToken.accent)
         }
         if (this.conflicts.length > 0) {
           Column() {
             Text('检测到 ' + this.conflicts.length + ' 处控制冲突')
-              .fontSize(14).fontColor('#F5B971')
+              .fontSize(FontToken.heading).fontColor(ColorToken.warning)
             ForEach(this.conflicts, (c: ConflictRecord, idx: number) => {
               Text(this.deviceName(c.deviceId) + '：' + c.winnerRuleId + ' 胜出，' +
                    c.loserRuleId + ' 被拦截')
-                .fontSize(12).fontColor('#E6D2AE').margin({ top: 6 })
+                .fontSize(FontToken.label).fontColor(ColorToken.warning).margin({ top: 6 })
             }, (c: ConflictRecord, idx: number) => idx.toString() + c.loserRuleId)
             Button('一键修复：为高温制冷补充「有人在室」条件')
-              .fontSize(13).backgroundColor('#8A5A18').margin({ top: 12 })
+              .fontSize(FontToken.body).backgroundColor(ColorToken.warningBg).margin({ top: 12 })
               .onClick(() => { this.fixConflict(); })
             Text('修复原理：R002 原本只看温度，高温且无人时会与 R005「无人节能」争夺空调。补充在室条件后，无人场景 R002 不再命中，冲突消失。')
-              .fontSize(11).fontColor('#9FB3C8').margin({ top: 8 })
+              .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 8 })
           }
-          .width('100%').padding(14).backgroundColor('#3A2C18').borderRadius(12)
+          .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.warningBg).borderRadius(RadiusToken.lg)
           .alignItems(HorizontalAlign.Start)
         } else {
           Column() {
-            Text('当前无控制冲突').fontSize(14).fontColor('#6FD3A8')
+            Text('当前无控制冲突').fontSize(FontToken.heading).fontColor(ColorToken.success)
             Text('可载入「S2 午后无人·冲突」场景观察优先级裁决过程。')
-              .fontSize(11).fontColor('#9FB3C8').margin({ top: 6 })
+              .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 6 })
           }
-          .width('100%').padding(14).backgroundColor('#16263B').borderRadius(12)
+          .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
           .alignItems(HorizontalAlign.Start)
         }
-      }.padding(16)
+      }.padding({ left: SpaceToken.lg, right: SpaceToken.lg, top: SpaceToken.lg, bottom: 80 })
     }.layoutWeight(1)
   }
 
@@ -732,35 +733,35 @@ struct Index {
   RecordRow(r: ExecutionRecord) {
     Column() {
       Row() {
-        Text('#' + r.order).fontSize(12).fontColor('#4FC3E8')
+        Text('#' + r.order).fontSize(FontToken.label).fontColor(ColorToken.accent)
         Text(r.ruleId + ' ' + r.ruleName)
-          .fontSize(13).fontColor('#E6F1FB').layoutWeight(1).margin({ left: 8 })
+          .fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1).margin({ left: 8 })
         Text(r.blocked ? '已拦截' : '已执行')
-          .fontSize(11).fontColor(r.blocked ? '#F5B971' : '#6FD3A8')
+          .fontSize(FontToken.caption).fontColor(r.blocked ? ColorToken.warning : ColorToken.success)
       }.width('100%')
       Text('优先级 ' + r.priority + ' · 条件 ' + this.conditionList(r.conditions))
-        .fontSize(11).fontColor('#9FB3C8').margin({ top: 6 })
+        .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 6 })
       Text(r.change.deviceName + '：' + (r.change.beforePower ? '开 ' : '关 ') +
            r.change.beforeValue + ' → ' + (r.change.afterPower ? '开 ' : '关 ') +
            r.change.afterValue)
-        .fontSize(11).fontColor('#B8CDDF').margin({ top: 4 })
-      Text(r.note).fontSize(11).fontColor('#8497AC').margin({ top: 4 })
+        .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 4 })
+      Text(r.note).fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 4 })
     }
-    .width('100%').padding(12).backgroundColor('#16263B').borderRadius(10)
+    .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.md).border({ width: SizeToken.borderWidth, color: ColorToken.border })
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   LogPanel() {
     Scroll() {
-      Column({ space: 10 }) {
-        Text('执行记录与存档').fontSize(15).fontColor('#E6F1FB')
+      Column({ space: SpaceToken.md }) {
+        Text('执行记录与存档').fontSize(FontToken.heading).fontColor(ColorToken.textPrimary)
         Text('持久化：Preferences / dormlink_state · 存档时间 ' + this.formatTime(this.savedAt))
-          .fontSize(11).fontColor('#9FB3C8')
-        Text(this.restoreMessage).fontSize(11).fontColor(this.restored ? '#6FD3A8' : '#F5B971')
+          .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
+        Text(this.restoreMessage).fontSize(FontToken.caption).fontColor(this.restored ? ColorToken.success : ColorToken.warning)
         if (this.records.length === 0) {
           Text('尚未执行演练，请到「联动台」或「演练」页运行一次')
-            .fontSize(13).fontColor('#8497AC')
+            .fontSize(FontToken.body).fontColor(ColorToken.textTertiary)
         }
         ForEach(this.records, (r: ExecutionRecord) => {
           this.RecordRow(r)
@@ -769,26 +770,26 @@ struct Index {
         if (this.warnings.length > 0) {
           Column() {
             Text('引擎告警 / 异常降级记录（' + this.warnings.length + ' 条）')
-              .fontSize(13).fontColor('#F5B971')
+              .fontSize(FontToken.body).fontColor(ColorToken.warning)
             ForEach(this.warnings, (w: string, idx: number) => {
-              Text('· ' + w).fontSize(11).fontColor('#E6D2AE').margin({ top: 4 })
+              Text('· ' + w).fontSize(FontToken.caption).fontColor(ColorToken.warning).margin({ top: 4 })
             }, (w: string, idx: number) => idx.toString() + w)
           }
-          .width('100%').padding(12).backgroundColor('#3A2C18').borderRadius(10)
+          .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.warningBg).borderRadius(RadiusToken.md)
           .alignItems(HorizontalAlign.Start)
         }
         Button('生成测试报告')
-          .fontSize(14).backgroundColor('#2E7FB8').width('100%').margin({ top: 8 })
+          .fontSize(FontToken.heading).backgroundColor(ColorToken.brand).width('100%').margin({ top: 8 })
           .onClick(() => { this.generateReport(); })
-        Row({ space: 10 }) {
-          Button('清空执行记录').fontSize(13).backgroundColor('#2C435C').layoutWeight(1)
+        Row({ space: SpaceToken.md }) {
+          Button('清空执行记录').fontSize(FontToken.body).backgroundColor(ColorToken.borderStrong).layoutWeight(1)
             .onClick(() => { this.clearRecords(); })
-          Button('恢复出厂方案').fontSize(13).backgroundColor('#5A2B33').layoutWeight(1)
+          Button('恢复出厂方案').fontSize(FontToken.body).backgroundColor(ColorToken.dangerBg).layoutWeight(1)
             .onClick(() => { this.resetAll(); })
         }.width('100%').margin({ top: 8 })
         Text('提示：结束应用进程后重新打开，规则、设备状态与最近 50 条执行记录会自动恢复。')
-          .fontSize(11).fontColor('#8497AC')
-      }.padding(16)
+          .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
+      }.padding({ left: SpaceToken.lg, right: SpaceToken.lg, top: SpaceToken.lg, bottom: 80 })
     }.layoutWeight(1)
   }
 
@@ -796,113 +797,113 @@ struct Index {
   RuleEditorPanel() {
     Column() {
       Scroll() {
-        Column({ space: 12 }) {
+        Column({ space: SpaceToken.md }) {
           Text(this.editorIsNew ? '新增联动规则' : '编辑规则 ' + this.draft.id)
-            .fontSize(17).fontColor('#E6F1FB')
-          Text('规则名称').fontSize(12).fontColor('#9FB3C8')
+            .fontSize(FontToken.title).fontColor(ColorToken.textPrimary)
+          Text('规则名称').fontSize(FontToken.label).fontColor(ColorToken.textSecondary)
           TextInput({ text: this.draft.name, placeholder: '请输入规则名称' })
-            .width('100%').backgroundColor('#16263B').fontColor('#E6F1FB')
+            .width('100%').backgroundColor(ColorToken.surface).fontColor(ColorToken.textPrimary)
             .onChange((v: string) => { this.setDraftName(v); })
           Row() {
-            Text('优先级（数值越小越优先）').fontSize(12).fontColor('#9FB3C8').layoutWeight(1)
+            Text('优先级（数值越小越优先）').fontSize(FontToken.label).fontColor(ColorToken.textSecondary).layoutWeight(1)
             TextInput({ text: this.draft.priority.toString() })
-              .type(InputType.Number).width(80).backgroundColor('#16263B').fontColor('#E6F1FB')
+              .type(InputType.Number).width(80).backgroundColor(ColorToken.surface).fontColor(ColorToken.textPrimary)
               .onChange((v: string) => { this.setDraftPriority(v); })
           }.width('100%')
 
-          Text('触发条件（全部满足才触发）').fontSize(13).fontColor('#4FC3E8')
+          Text('触发条件（全部满足才触发）').fontSize(FontToken.body).fontColor(ColorToken.accent)
           ForEach(this.draft.conditions, (c: Condition, idx: number) => {
             Column() {
               Row({ space: 6 }) {
                 Select(METRIC_SELECT)
                   .selected(this.indexIn(METRIC_TEXTS, metricLabel(c.metric)))
                   .value(metricLabel(c.metric))
-                  .font({ size: 12 }).backgroundColor('#16263B')
+                  .font({ size: 12 }).backgroundColor(ColorToken.surface)
                   .onSelect((i: number) => { this.setConditionMetric(idx, i); })
                 Select(OP_SELECT)
                   .selected(this.indexIn(OP_TEXTS, opLabel(c.op)))
                   .value(opLabel(c.op))
-                  .font({ size: 12 }).backgroundColor('#16263B')
+                  .font({ size: 12 }).backgroundColor(ColorToken.surface)
                   .onSelect((i: number) => { this.setConditionOp(idx, i); })
                 TextInput({ text: c.value.toString() })
-                  .type(InputType.Number).width(70).backgroundColor('#16263B').fontColor('#E6F1FB')
+                  .type(InputType.Number).width(70).backgroundColor(ColorToken.surface).fontColor(ColorToken.textPrimary)
                   .onChange((v: string) => { this.setConditionValue(idx, v); })
-                Button('×').fontSize(13).backgroundColor('#5A2B33')
+                Button('×').fontSize(FontToken.body).backgroundColor(ColorToken.dangerBg)
                   .onClick(() => { this.removeCondition(idx); })
               }.width('100%')
-              Text(describeCondition(c)).fontSize(11).fontColor('#8497AC').margin({ top: 4 })
+              Text(describeCondition(c)).fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 4 })
             }
-            .width('100%').padding(10).backgroundColor('#1B2E47').borderRadius(8)
+            .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.surfaceAlt).borderRadius(RadiusToken.md)
             .alignItems(HorizontalAlign.Start)
           }, (c: Condition, idx: number) => idx.toString() + c.metric)
-          Button('+ 添加条件（最多 3 条）').fontSize(12).backgroundColor('#2C435C')
+          Button('+ 添加条件（最多 3 条）').fontSize(FontToken.label).backgroundColor(ColorToken.borderStrong)
             .onClick(() => { this.addCondition(); })
 
-          Text('执行动作').fontSize(13).fontColor('#4FC3E8')
+          Text('执行动作').fontSize(FontToken.body).fontColor(ColorToken.accent)
           ForEach(this.draft.actions, (a: DeviceAction, idx: number) => {
             Row({ space: 6 }) {
               Select(DEVICE_SELECT)
                 .selected(this.indexIn(DEVICE_TEXTS, this.deviceName(a.deviceId)))
                 .value(this.deviceName(a.deviceId))
-                .font({ size: 12 }).backgroundColor('#16263B')
+                .font({ size: 12 }).backgroundColor(ColorToken.surface)
                 .onSelect((i: number) => { this.setActionDevice(idx, i); })
-              Text('开关').fontSize(11).fontColor('#9FB3C8')
+              Text('开关').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
               Toggle({ type: ToggleType.Switch, isOn: a.power })
                 .onChange((on: boolean) => { this.setActionPower(idx, on); })
               TextInput({ text: a.value.toString() })
-                .type(InputType.Number).width(64).backgroundColor('#16263B').fontColor('#E6F1FB')
+                .type(InputType.Number).width(64).backgroundColor(ColorToken.surface).fontColor(ColorToken.textPrimary)
                 .onChange((v: string) => { this.setActionValue(idx, v); })
-              Button('×').fontSize(13).backgroundColor('#5A2B33')
+              Button('×').fontSize(FontToken.body).backgroundColor(ColorToken.dangerBg)
                 .onClick(() => { this.removeAction(idx); })
-            }.width('100%').padding(10).backgroundColor('#1B2E47').borderRadius(8)
+            }.width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.surfaceAlt).borderRadius(RadiusToken.md)
           }, (a: DeviceAction, idx: number) => idx.toString() + a.deviceId)
-          Button('+ 添加动作（最多 3 个）').fontSize(12).backgroundColor('#2C435C')
+          Button('+ 添加动作（最多 3 个）').fontSize(FontToken.label).backgroundColor(ColorToken.borderStrong)
             .onClick(() => { this.addAction(); })
 
-          Row({ space: 10 }) {
-            Button('保存并重新演练').fontSize(14).backgroundColor('#2E7FB8').layoutWeight(1)
+          Row({ space: SpaceToken.md }) {
+            Button('保存并重新演练').fontSize(FontToken.heading).backgroundColor(ColorToken.brand).layoutWeight(1)
               .onClick(() => { this.saveDraft(); })
-            Button('取消').fontSize(14).backgroundColor('#2C435C').layoutWeight(1)
+            Button('取消').fontSize(FontToken.heading).backgroundColor(ColorToken.borderStrong).layoutWeight(1)
               .onClick(() => { this.showEditor = false; })
           }.width('100%').margin({ top: 6 })
-        }.padding(16)
+        }.padding(SpaceToken.lg)
       }.layoutWeight(1)
     }
-    .width('100%').height('100%').backgroundColor('#0B1220')
+    .width('100%').height('100%').backgroundColor(ColorToken.canvas)
   }
 
   @Builder
   ReportPanel() {
     Column() {
-      Column({ space: 8 }) {
-        Text('规则引擎自检报告').fontSize(19).fontColor('#E6F1FB')
+      Column({ space: SpaceToken.sm }) {
+        Text('规则引擎自检报告').fontSize(FontToken.display).fontColor(ColorToken.textPrimary)
         Text('生成时间 ' + this.formatTime(this.reportTime) + ' · 耗时 ' + this.reportDuration + ' ms')
-          .fontSize(11).fontColor('#9FB3C8')
+          .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
         Row({ space: 18 }) {
-          Text('通过 ' + this.reportPassed).fontSize(16).fontColor('#6FD3A8')
+          Text('通过 ' + this.reportPassed).fontSize(FontToken.title).fontColor(ColorToken.success)
           Text('失败 ' + (this.reportTotal - this.reportPassed))
-            .fontSize(16).fontColor(this.reportTotal - this.reportPassed > 0 ? '#F08A8A' : '#8497AC')
-          Text('共 ' + this.reportTotal + ' 条').fontSize(16).fontColor('#E6F1FB')
+            .fontSize(FontToken.title).fontColor(this.reportTotal - this.reportPassed > 0 ? ColorToken.danger : ColorToken.textTertiary)
+          Text('共 ' + this.reportTotal + ' 条').fontSize(FontToken.title).fontColor(ColorToken.textPrimary)
         }.width('100%').margin({ top: 4 })
         Text('正常 ' + this.reportNormal + ' 条 · 边界 ' + this.reportBoundary + ' 条 · 异常 ' + this.reportException + ' 条')
-          .fontSize(12).fontColor('#4FC3E8')
+          .fontSize(FontToken.label).fontColor(ColorToken.accent)
       }
-      .width('100%').padding(16).backgroundColor('#16263B').borderRadius(12)
+      .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
       .alignItems(HorizontalAlign.Start)
 
       Scroll() {
-        Column({ space: 8 }) {
+        Column({ space: SpaceToken.sm }) {
           ForEach(this.reportCases, (c: SelfTestCase) => {
             Row() {
               Text(c.passed ? '✓' : '✗')
-                .fontSize(15).fontColor(c.passed ? '#6FD3A8' : '#F08A8A').width(22)
+                .fontSize(FontToken.heading).fontColor(c.passed ? ColorToken.success : ColorToken.danger).width(22)
               Column() {
                 Text(c.category + ' · ' + c.name)
-                  .fontSize(13).fontColor('#E6F1FB')
-                Text(c.detail).fontSize(11).fontColor('#9FB3C8').margin({ top: 3 })
+                  .fontSize(FontToken.body).fontColor(ColorToken.textPrimary)
+                Text(c.detail).fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 3 })
               }.alignItems(HorizontalAlign.Start).layoutWeight(1)
             }
-            .width('100%').padding(10).backgroundColor('#16263B').borderRadius(8)
+            .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.md).border({ width: SizeToken.borderWidth, color: ColorToken.border })
             .alignItems(VerticalAlign.Top)
           }, (c: SelfTestCase) => c.id + (c.passed ? '1' : '0'))
         }.padding({ left: 16, right: 16, top: 12, bottom: 12 })
@@ -910,10 +911,10 @@ struct Index {
       .layoutWeight(1)
 
       Button('关闭')
-        .fontSize(14).backgroundColor('#2C435C').width('100%').margin({ bottom: 18 })
+        .fontSize(FontToken.heading).backgroundColor(ColorToken.borderStrong).width('100%').margin({ bottom: 18 })
         .onClick(() => { this.showReport = false; })
     }
-    .width('100%').height('100%').backgroundColor('#0B1220')
+    .width('100%').height('100%').backgroundColor(ColorToken.canvas)
     .padding({ top: 16, left: 16, right: 16 })
   }
 
@@ -929,10 +930,10 @@ struct Index {
         }
         .barHeight(58)
         .layoutWeight(1)
-        .backgroundColor('#0B1220')
+        .backgroundColor(ColorToken.canvas)
         .onChange((index: number) => { this.currentTab = index; })
       }
-      .width('100%').height('100%').backgroundColor('#0B1220')
+      .width('100%').height('100%').backgroundColor(ColorToken.canvas)
 
       if (this.showEditor) {
         this.RuleEditorPanel()
@@ -944,12 +945,12 @@ struct Index {
       if (this.toast.length > 0) {
         Column() {
           Text(this.toast)
-            .fontSize(13).fontColor('#0B1220').backgroundColor('#6FD3A8')
+            .fontSize(FontToken.body).fontColor(ColorToken.canvas).backgroundColor(ColorToken.success)
             .padding({ left: 14, right: 14, top: 10, bottom: 10 })
-            .borderRadius(8)
+            .borderRadius(RadiusToken.md)
         }
         .width('100%').padding({ left: 16, right: 16 })
-        .margin({ top: 72 })
+        .margin({ top: 104 })
         .alignItems(HorizontalAlign.Center)
       }
     }
