@@ -88,7 +88,7 @@ struct Index {
   @State logOnlyBlocked: boolean = false;
   private timerId: number = -1;
   /** 定时器归属设备：切换设备后不再显示别的设备的倒计时（T1） */
-  private timerDeviceId: string = '';
+  @State timerDeviceId: string = '';
   /** toast 定时器句柄：连续提示时先清掉上一个，避免提前清空后一条 */
   private toastTimerId: number = -1;
 
@@ -1231,17 +1231,25 @@ struct Index {
     }
   }
 
-  /** 当前设备是否有生效中的定时（T1） */
+  /**
+   * 当前设备是否有生效中的定时（T1）。
+   * 注意：必须先把 timerEndAt 读出来再做短路判断——若写成 `a && this.timerEndAt > 0`，
+   * 首次渲染时 a 为 false 会短路，timerEndAt 不会被读取，ArkUI 建立不了状态依赖，
+   * 导致设定定时后界面不刷新（本项目已知坑：@Builder/方法内状态依赖丢失）。
+   */
   private timerActive(): boolean {
-    return this.timerDeviceId === this.detailId && this.timerEndAt > 0;
+    const endAt: number = this.timerEndAt;
+    const owner: string = this.timerDeviceId;
+    return owner === this.detailId && endAt > 0;
   }
 
   /** 定时状态文案：有定时显示到点时刻，否则提示未设定（T1） */
   private timerHint(): string {
-    if (!this.timerActive()) {
+    const endAt: number = this.timerEndAt;
+    if (this.timerDeviceId !== this.detailId || endAt <= 0) {
       return '未设定定时';
     }
-    return '将于 ' + this.formatTime(this.timerEndAt) + ' 自动关闭';
+    return '将于 ' + this.formatTime(endAt) + ' 自动关闭';
   }
 
   private timerPillStyle(m: number): string {
