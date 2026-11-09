@@ -71,14 +71,14 @@ def arrow(d, p1, p2, color=ARROW, w=2):
 
 def badge(d, y):
     rbox(d, (1160, y + 16, 1350, y + 48), ACC_BG, ACC_B, w=2, r=8)
-    ctext(d, (1160, y + 16, 1350, y + 48), '★ 徐豪已完成', FTAG, ACC)
+    ctext(d, (1160, y + 16, 1350, y + 48), '★ 已实现', FTAG, ACC)
 
 
 def build_architecture():
     img = Image.new('RGB', (1400, 950), BG)
     d = ImageDraw.Draw(img)
     d.text((60, 26), '图2.1  系统架构图 — DormLink 智宿联动实验室', font=FT, fill=TITLE)
-    d.text((60, 72), '★ 橙色标记 = 徐豪当前已完成模块；钱志刚（qianzhigang-free）已加入组队协作，具体分工待确认',
+    d.text((60, 72), '★ 橙色标记 = 当前已实现并通过验证的模块',
            font=FS, fill=SUB)
 
     def layer(y1, y2, title, boxes, bx_y, box_h):
@@ -119,7 +119,7 @@ def build_architecture():
 
     layer(800, 920, '测试层 · 直接 import 业务层同一份 .ts 源码',
           [(80, 510, '★ ohosTest (hypium)', ['DevEco Studio / 设备运行，14 条'], True),
-           (610, 510, '★ tests/node (node:test)', ['19 条实测通过，见 测试运行日志.md'], True)], 850, 58)
+           (610, 510, '★ tests/node (node:test)', ['20 条实测通过，见 测试运行日志.md'], True)], 850, 58)
 
     for a, b in [((600, 300), (600, 340)), ((600, 530), (600, 570)), ((600, 760), (600, 800))]:
         arrow(d, a, b, w=3)
