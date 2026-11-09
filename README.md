@@ -90,6 +90,7 @@ dormlink-harmony/
 │   ├── 设计规范.md                 ★ Design System：Token、组件、布局、自查清单
 │   ├── 协作任务清单.md             两人分工待办（文件路径 / 改动点 / 验收标准）
 │   ├── 运行与录屏指南.md           导入/编译/截图/录屏分镜
+│   ├── 编译运行与截图录屏总结.md   实际执行记录、真实参数与已知缺口
 │   ├── 系统架构图.png              架构示意图
 │   └── 业务流程图.png              规则引擎执行流程图
 ├── screenshots/                    运行截图与录屏存放目录（由本人实机补录）
@@ -136,9 +137,12 @@ dormlink-harmony/
 | `07-execution-log.jpeg` | 执行日志：#1~#5，含「已拦截」与设备 before→after |
 | `08-restore-after-restart.jpeg` | 结束进程重启后：已恢复存档 + 恢复提示 |
 | `09-test-report.jpeg` | 应用内「生成测试报告」：12 条断言全部通过（正常 5 / 边界 3 / 异常 4） |
+| `10-device-grid.jpeg` | 设备网格：两列卡片 + 实物图标 + 开/关徽章 + 进度条 |
+| `11-device-detail.jpeg` | 设备详情页：电源开关、亮度滑块、定时关闭 |
+| `11-device-detail-return.jpeg` | 详情页返回后：设备卡数值同步为 79% |
 | `demo-recording.mp4` | 演示视频（18 fps / 124 秒，看规则 → 逐条改数据验证设备 → 异常校验 → 场景冲突 → 日志 → 生成测试报告 → 重启恢复） |
 
-采集方式：`hvigorw.js assembleHap` 编译未签名 HAP → `hdc` 安装启动 → `uitest dumpLayout` + `uiInput` 驱动界面 → `snapshot_display` 截屏，完整命令与执行记录见 [`docs/运行与录屏指南.md`](docs/运行与录屏指南.md)。
+采集方式：`hvigorw.js assembleHap` 编译未签名 HAP → `hdc` 安装启动 → `uitest dumpLayout` + `uiInput` 驱动界面 → `snapshot_display` 截屏。完整命令、执行记录与踩坑说明见 [`docs/编译运行与截图录屏总结.md`](docs/编译运行与截图录屏总结.md) 与 [`docs/运行与录屏指南.md`](docs/运行与录屏指南.md)。
 
 **诚实说明**：`demo-recording.mp4` 是模拟器连续截帧后合成的视频——该模拟器镜像不含系统录屏应用，官方录屏链路仅支持真机，故按替代方案产出。`docs/系统架构图.png`、`docs/业务流程图.png` 是设计示意图，不是运行截图。
 
