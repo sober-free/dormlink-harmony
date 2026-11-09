@@ -149,27 +149,29 @@ dormlink-harmony/
 
 | 文件 | 内容 |
 | --- | --- |
-| `01-dashboard.jpeg` | 联动台：环境调节、演练结果摘要、设备状态 |
-| `02-rule-list.jpeg` | 规则列表：6 条规则，R001 显示双条件 |
+| `01-dashboard.jpeg` | 联动台：环境摘要（温度/湿度/光照三列）+ 快捷场景 + 设备网格 |
+| `02-rule-list.jpeg` | 规则页：单卡多行列表，右侧开关与「›」，点行进详情 |
+| `03-rule-detail.jpeg` | 规则详情：概览（名称/优先级/启用开关）+ 触发条件 + 执行动作 + 操作 |
 | `03-rule-editor.jpeg` | 规则编辑器：条件行 + 动作行 + 优先级 |
-| `04-scene-s1.jpeg` | S1 夏夜归寝：触发 R001 → R002 |
-| `05-conflict-s2.jpeg` | S2 冲突提示：空调 R002 胜出、R005 被拦截 |
+| `04-scene-s1.jpeg` | 演练页：载入 S1 夏夜归寝，触发 R001 → R002 |
+| `04b-scene-s1-result.jpeg` | 联动台：S1 执行后的设备联动结果 |
+| `05-conflict-s2.jpeg` | S2 午后无人：检测到 1 处控制冲突（R002 胜出 / R005 被拦截） |
 | `06-conflict-fixed.jpeg` | 一键修复后：当前无控制冲突 |
-| `07-execution-log.jpeg` | 执行日志：#1~#5，含「已拦截」与设备 before→after |
-| `08-restore-after-restart.jpeg` | 结束进程重启后：已恢复存档 + 恢复提示 |
-| `09-test-report.jpeg` | 应用内「生成测试报告」：12 条断言全部通过（正常 5 / 边界 3 / 异常 4） |
+| `07-execution-log.jpeg` | 日志页：执行时间线（全部 11 条，序号连续，含「已拦截」标记） |
+| `08-restore-after-restart.jpeg` | 结束进程重启后：已从 Preferences 恢复 17 条执行记录 |
+| `09-test-report.jpeg` | 应用内自检报告：12 条断言全部通过（正常 5 / 边界 3 / 异常 4） |
 | `10-device-grid.jpeg` | 设备网格：两列卡片 + 实物图标 + 开/关徽章 + 进度条 |
-| `11-device-detail.jpeg` | 设备详情页：电源开关、亮度滑块、定时关闭 |
-| `11-device-detail-return.jpeg` | 详情页返回后：设备卡数值同步为 79% |
-| `13-timer-countdown.jpeg` | 设备详情页定时关闭：选「30 分钟」后显示「将于 23:32:58 自动关闭」 |
-| `14-rule-duplicate.jpeg` | 规则页点「复制」：提示「已复制为 R007（默认停用）」，规则数 6 → 7 |
-| `14b-rule-duplicate-card.jpeg` | 复制结果：`R007 高温自动制冷 副本`，优先级 20、已停用、开关关闭 |
-| `15-log-filter.jpeg` | 日志页「只看拦截」：仅保留被拦截记录（#4 R005 无人节能 · 已拦截） |
-| `demo-recording.mp4` | 演示视频（18 fps / 124 秒，看规则 → 逐条改数据验证设备 → 异常校验 → 场景冲突 → 日志 → 生成测试报告 → 重启恢复） |
+| `11-device-detail.jpeg` | 设备详情：概览 + 参数 + 定时关闭 + 设备信息 + 操作 |
+| `13-timer-countdown.jpeg` | 定时关闭：选「30 分钟」后显示「将于 00:38:20 自动关闭」 |
+| `14-rule-detail-copy.jpeg` | 规则详情操作区：编辑规则 / 复制为停用副本 / 删除规则 |
+| `14-rule-duplicate.jpeg` | 复制后提示「已复制为 R007（默认停用）」，规则数 6 → 7 |
+| `14b-rule-duplicate-card.jpeg` | 复制结果：`R007 高温自动制冷 副本`，已停用、开关关闭 |
+| `15-log-filter.jpeg` | 日志页「只看拦截」：仅保留被拦截记录 |
+| `demo-recording.mp4` | 演示视频（540×1166 / 16 fps / 158 秒）：冷启动 → 规则详情 → 改环境量驱动联动 → S2 冲突与一键修复 → 日志筛选 → 测试报告 → 规则复制 → 重启恢复 |
 
-采集方式：`hvigorw.js assembleHap` 编译未签名 HAP → `hdc` 安装启动 → `uitest dumpLayout` + `uiInput` 驱动界面 → `snapshot_display` 截屏。完整命令、执行记录与踩坑说明见 [`docs/编译运行与截图录屏总结.md`](docs/编译运行与截图录屏总结.md) 与 [`docs/运行与录屏指南.md`](docs/运行与录屏指南.md)。
+采集方式：`hvigorw.js assembleHap` 编译未签名 HAP → `hdc install` 安装启动 → `uitest dumpLayout` + `uiInput` 驱动界面（按控件树文本定位，不硬编码坐标）→ `snapshot_display` 截屏。视频用**设备端连续截帧**（`snapshot_display -w 540 -h 1166` 循环，约 16 fps）→ `ffmpeg` 合成 H.264。完整命令、执行记录与踩坑说明见 [`docs/编译运行与截图录屏总结.md`](docs/编译运行与截图录屏总结.md) 与 [`docs/运行与录屏指南.md`](docs/运行与录屏指南.md)。
 
-**诚实说明**：`demo-recording.mp4` 是模拟器连续截帧后合成的视频——该模拟器镜像不含系统录屏应用，官方录屏链路仅支持真机，故按替代方案产出。`docs/系统架构图.png`、`docs/业务流程图.png` 是设计示意图，不是运行截图。
+**诚实说明**：`demo-recording.mp4` 是模拟器**连续截帧后合成**的视频（约 16 fps）——该模拟器镜像不含系统录屏应用、`screenrecord` 命令也不可用，官方录屏链路仅支持真机，故按替代方案产出；帧率为截帧上限，非渲染帧率。`docs/系统架构图.png`、`docs/业务流程图.png` 是设计示意图，不是运行截图。
 
 ## 9. 设计规范（Design System）
 

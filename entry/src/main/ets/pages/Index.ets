@@ -1171,10 +1171,17 @@ struct Index {
     .alignItems(HorizontalAlign.Start)
   }
 
-  /** 日志筛选药丸：全部 / 只看拦截（T3） */
+  /**
+   * 日志筛选药丸：全部 / 只看拦截（T3）
+   * 注意：计数必须写在 @Builder 内部读 this.records / this.blockedRecords()，
+   * 不能把 `'全部 ' + length` 当参数传进来——@Builder 的值传递参数不会随状态刷新，
+   * 会出现「药丸显示 0 条、列表却有 7 条」的错位。
+   */
   @Builder
-  LogFilterPill(label: string, onlyBlocked: boolean) {
-    Text(label)
+  LogFilterPill(onlyBlocked: boolean) {
+    Text(onlyBlocked
+      ? '只看拦截 ' + this.blockedRecords().toString()
+      : '全部 ' + this.records.length.toString())
       .fontSize(FontToken.label)
       .fontColor(this.logOnlyBlocked === onlyBlocked ? ColorToken.textInverse : ColorToken.textSecondary)
       .backgroundColor(this.logOnlyBlocked === onlyBlocked ? ColorToken.brand : ColorToken.surfaceAlt)
@@ -1208,8 +1215,8 @@ struct Index {
 
         this.SectionTitle('执行记录')
         Row({ space: SpaceToken.sm }) {
-          this.LogFilterPill('全部 ' + this.records.length, false)
-          this.LogFilterPill('只看拦截 ' + this.blockedRecords(), true)
+          this.LogFilterPill(false)
+          this.LogFilterPill(true)
         }.width('100%')
 
         if (this.visibleRecords().length === 0) {
