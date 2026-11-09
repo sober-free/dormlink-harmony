@@ -67,3 +67,50 @@ for cx, cy, r in ((52, 18, 7), (72, 10, 9), (92, 18, 7)):
 im.save(os.path.join(OUT, 'dev_humidifier.png'))
 
 print('设备图标已生成 ->', OUT)
+
+# ---------------- 底部 TabBar 线性图标（4 组 × on/off）----------------
+TAB_ON = (255, 105, 0, 255)
+TAB_OFF = (150, 158, 168, 255)
+TS = 48
+
+
+def tab_canvas():
+    return Image.new('RGBA', (TS, TS), (0, 0, 0, 0))
+
+
+def tab_stroke(d, pts, color, w=3.2):
+    d.line(pts, fill=color, width=int(w), joint='curve')
+    for p in (pts[0], pts[-1]):
+        d.ellipse([p[0] - w / 2, p[1] - w / 2, p[0] + w / 2, p[1] + w / 2], fill=color)
+
+
+for color, suffix in ((TAB_ON, 'on'), (TAB_OFF, 'off')):
+    # 联动台：房子
+    im = tab_canvas(); d = ImageDraw.Draw(im)
+    tab_stroke(d, [(8, 22), (24, 8), (40, 22)], color)
+    tab_stroke(d, [(11, 21), (11, 40), (37, 40), (37, 21)], color)
+    tab_stroke(d, [(20, 40), (20, 29), (28, 29), (28, 40)], color)
+    im.save(os.path.join(OUT, 'tab_home_%s.png' % suffix))
+
+    # 规则：清单
+    im = tab_canvas(); d = ImageDraw.Draw(im)
+    for y in (14, 24, 34):
+        d.ellipse([8, y - 3, 14, y + 3], fill=color)
+        tab_stroke(d, [(19, y), (40, y)], color, 3)
+    im.save(os.path.join(OUT, 'tab_rule_%s.png' % suffix))
+
+    # 演练：圆环 + 播放三角
+    im = tab_canvas(); d = ImageDraw.Draw(im)
+    d.ellipse([7, 7, 41, 41], outline=color, width=3)
+    d.polygon([(20, 16), (20, 32), (34, 24)], fill=color)
+    im.save(os.path.join(OUT, 'tab_scene_%s.png' % suffix))
+
+    # 日志：文档
+    im = tab_canvas(); d = ImageDraw.Draw(im)
+    tab_stroke(d, [(12, 8), (30, 8), (38, 16), (38, 40), (12, 40), (12, 8)], color)
+    tab_stroke(d, [(30, 8), (30, 16), (38, 16)], color)
+    for y in (24, 30, 36):
+        tab_stroke(d, [(18, y), (32, y)], color, 2.6)
+    im.save(os.path.join(OUT, 'tab_log_%s.png' % suffix))
+
+print('TabBar 图标已生成')
