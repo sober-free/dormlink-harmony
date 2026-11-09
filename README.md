@@ -141,6 +141,10 @@ dormlink-harmony/
 | `10-device-grid.jpeg` | 设备网格：两列卡片 + 实物图标 + 开/关徽章 + 进度条 |
 | `11-device-detail.jpeg` | 设备详情页：电源开关、亮度滑块、定时关闭 |
 | `11-device-detail-return.jpeg` | 详情页返回后：设备卡数值同步为 79% |
+| `13-timer-countdown.jpeg` | 设备详情页定时关闭：选「30 分钟」后显示「将于 23:32:58 自动关闭」 |
+| `14-rule-duplicate.jpeg` | 规则页点「复制」：提示「已复制为 R007（默认停用）」，规则数 6 → 7 |
+| `14b-rule-duplicate-card.jpeg` | 复制结果：`R007 高温自动制冷 副本`，优先级 20、已停用、开关关闭 |
+| `15-log-filter.jpeg` | 日志页「只看拦截」：仅保留被拦截记录（#4 R005 无人节能 · 已拦截） |
 | `demo-recording.mp4` | 演示视频（18 fps / 124 秒，看规则 → 逐条改数据验证设备 → 异常校验 → 场景冲突 → 日志 → 生成测试报告 → 重启恢复） |
 
 采集方式：`hvigorw.js assembleHap` 编译未签名 HAP → `hdc` 安装启动 → `uitest dumpLayout` + `uiInput` 驱动界面 → `snapshot_display` 截屏。完整命令、执行记录与踩坑说明见 [`docs/编译运行与截图录屏总结.md`](docs/编译运行与截图录屏总结.md) 与 [`docs/运行与录屏指南.md`](docs/运行与录屏指南.md)。
