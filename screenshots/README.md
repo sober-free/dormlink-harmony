@@ -13,10 +13,10 @@
 06-conflict-fixed.jpeg        一键修复后：当前无控制冲突
 07-execution-log.jpeg         执行日志：#1~#5，含「已拦截」与设备 before→after
 08-restore-after-restart.jpeg 结束进程重启后：已恢复存档 + 恢复提示
-demo-recording.mp4            演示视频（窗口直采 18 fps，45 秒，含重启恢复）
+demo-recording.mp4            演示视频（18 fps / 61 秒，一镜到底）
 ```
 
-> 说明：`demo-recording.mp4` 由 Win32 `PrintWindow` 直接抓取模拟器窗口、18 fps 连续录制后合成（811 帧 / 45 秒）——该模拟器镜像不含系统录屏应用（`pm list packages` 查不到 screenrecorder），官方录屏链路仅支持真机，故采用替代方案，并在报告与 README 中如实标注。
+> 说明：`demo-recording.mp4` 由 Win32 `PrintWindow` 直接抓取模拟器窗口、18 fps 连续录制后合成（1093 帧 / 61 秒），流程为：桌面冷启动 → 调整 Mock 环境 → 执行联动 → 新增规则 → 载入 S2 冲突场景 → 一键修复 → 查看执行日志 → 强制结束进程 → 重启恢复。该模拟器镜像不含系统录屏应用（`pm list packages` 查不到 screenrecorder），官方录屏链路仅支持真机，故采用替代方案，并在报告与 README 中如实标注。
 
 拍摄位置、分镜脚本与常见问题见 [`../docs/运行与录屏指南.md`](../docs/运行与录屏指南.md)。
 
