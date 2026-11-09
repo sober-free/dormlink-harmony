@@ -142,6 +142,7 @@ dormlink-harmony/
 - `entry/src/ohosTest/ets/test/RuleEngine.test.ets`：14 条 `@ohos/hypium` 用例，在 DevEco Studio 中右键 `ohosTest` → `Run 'Tests in entry'` 执行。
 - 测试直接 import `entry/src/main/ets/engine/RuleEngine.ts`，即应用实际运行的那份源码，**没有另写模拟实现**。
 - 三类覆盖：正常 9 / 边界 6 / 异常 8（Node 侧，含协作新增 3 条），详见需求说明书第 7 节。
+- **成员分工（每人 3 条，各自覆盖正常/边界/异常）**：徐豪负责 `[正常 1]` `[边界 1]` `[异常 1]`（`rule-engine.test.mjs`，另维护该文件其余 17 条）；钱志刚负责 `[协作-正常]` `[协作-边界]` `[协作-异常]`（`rule-engine.collab.test.mjs`）。完整对照表见需求说明书 7.4。
 
 ## 8. 运行截图与演示视频
 
