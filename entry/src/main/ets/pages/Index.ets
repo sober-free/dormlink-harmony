@@ -492,28 +492,71 @@ struct Index {
     return parts.join(' 且 ');
   }
 
+  private onlineCount(): number {
+    let n = 0;
+    for (const d of this.devices) {
+      if (d.power) {
+        n = n + 1;
+      }
+    }
+    return n;
+  }
+
+  private sceneIcon(id: string): string {
+    if (id === 'S1') {
+      return '月';
+    }
+    if (id === 'S2') {
+      return '日';
+    }
+    if (id === 'S3') {
+      return '晨';
+    }
+    return '夜';
+  }
+
+  @Builder
+  SceneShortcut(s: ScenePreset) {
+    Column() {
+      Text(this.sceneIcon(s.id))
+        .fontSize(17).fontColor(ColorToken.brand)
+        .width(40).height(40).textAlign(TextAlign.Center)
+        .backgroundColor(ColorToken.accentSubtle).borderRadius(RadiusToken.pill)
+      Text(s.name)
+        .fontSize(FontToken.label).fontColor(ColorToken.textPrimary).margin({ top: SpaceToken.sm })
+      Text(s.id + ' · ' + s.env.hour.toString() + ' 点')
+        .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 2 })
+    }
+    .width(116).padding(SpaceToken.md)
+    .backgroundColor(ColorToken.surface)
+    .borderRadius(RadiusToken.lg)
+    .alignItems(HorizontalAlign.Start)
+    .onClick(() => { this.applyScene(s); })
+  }
+
   @Builder
   HeaderBar() {
-    Column() {
-      Row() {
-        Column() {
-          Text('DormLink 智宿联动实验室')
-            .fontSize(FontToken.display).fontWeight(FontWeight.Bold).fontColor(ColorToken.textPrimary)
-          Text('智能宿舍自动化规则编排 · 主题三')
-            .fontSize(FontToken.label).fontColor(ColorToken.textSecondary).margin({ top: 2 })
-        }.alignItems(HorizontalAlign.Start).layoutWeight(1)
-        Column() {
-          Text(this.restored ? '已恢复存档' : (this.savedAt > 0 ? '已保存方案' : '当前方案'))
-            .fontSize(FontToken.caption).fontColor(this.restored || this.savedAt > 0 ? ColorToken.success : ColorToken.warning)
-          Text('存档 ' + this.formatTime(this.savedAt))
-            .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
-        }.alignItems(HorizontalAlign.End)
-      }.width('100%')
-      Text(this.restoreMessage)
-        .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 8 })
+    Row() {
+      Column() {
+        Row() {
+          Text('DormLink 智宿')
+            .fontSize(FontToken.display).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+          Text(' ▾')
+            .fontSize(FontToken.label).fontColor(ColorToken.textTertiary)
+        }
+        Text(this.env.temperature.toString() + '℃ · 湿度 ' + this.env.humidity.toString() +
+             '% · ' + this.env.illuminance.toString() + ' lux')
+          .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 3 })
+      }.alignItems(HorizontalAlign.Start).layoutWeight(1)
+      Column() {
+        Text(this.onlineCount().toString())
+          .fontSize(20).fontWeight(FontWeight.Medium).fontColor(ColorToken.brand)
+        Text('设备在线')
+          .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
+      }.alignItems(HorizontalAlign.End)
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 14, bottom: 10 })
+    .padding({ left: SpaceToken.lg, right: SpaceToken.lg, top: SpaceToken.lg, bottom: SpaceToken.md })
     .backgroundColor(ColorToken.surfaceHigh)
   }
 
@@ -627,6 +670,18 @@ struct Index {
   DashboardPanel() {
     Scroll() {
       Column({ space: SpaceToken.md }) {
+        Text('快捷场景')
+          .fontSize(FontToken.heading).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary).width('100%')
+        Scroll() {
+          Row({ space: SpaceToken.md }) {
+            ForEach(SCENE_PRESETS, (s: ScenePreset) => {
+              this.SceneShortcut(s)
+            }, (s: ScenePreset) => s.id)
+          }
+        }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .width('100%')
         Text('模拟环境（可直接调整）').fontSize(FontToken.heading).fontColor(ColorToken.textPrimary).width('100%')
         Column({ space: SpaceToken.md }) {
           this.MetricSlider('温度', 'temperature', -10, 50, 1, '℃')
