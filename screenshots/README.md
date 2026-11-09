@@ -13,7 +13,7 @@
 06-conflict-fixed.jpeg        一键修复后：当前无控制冲突
 07-execution-log.jpeg         执行日志：#1~#5，含「已拦截」与设备 before→after
 08-restore-after-restart.jpeg 结束进程重启后：已恢复存档 + 恢复提示
-demo-recording.mp4            演示视频（18 fps / 89 秒，逐变量联动演示，一镜到底）
+demo-recording.mp4            演示视频（18 fps / 93 秒，测试结果 + 逐变量联动演示）
 ```
 
 > 说明：`demo-recording.mp4` 由 Win32 `PrintWindow` 直接抓取模拟器窗口、18 fps 连续录制后合成（1609 帧 / 89 秒）。演示主线是「改一个环境变量 → 触发对应规则 → 设备状态变化」：默认环境 0 条 → 温度 31℃ 触发 R002 → 光照 900lux 触发 R003 → 湿度 30% 触发 R004 → 时段 23 点触发双条件 R001 → 启用 R006 后 8 点触发晨间唤醒（与 R003 争窗帘）→ 切换无人触发 R005（与 R002/R003/R006 三方争用，拦截 3 个）→ S2 场景一键修复 → 日志 → 重启恢复。该模拟器镜像不含系统录屏应用（`pm list packages` 查不到 screenrecorder），官方录屏链路仅支持真机，故采用替代方案，并在报告与 README 中如实标注。
