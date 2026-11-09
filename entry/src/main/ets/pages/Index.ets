@@ -82,8 +82,6 @@ struct Index {
   @State showDetail: boolean = false;
   @State detailId: string = 'main_light';
   @State timerMinutes: number = 0;
-  // ---- 设备分组（米家式房间 Tab）----
-  @State deviceFilter: string = 'all';
   private timerId: number = -1;
 
   async aboutToAppear(): Promise<void> {
@@ -509,69 +507,6 @@ struct Index {
     return n;
   }
 
-  private isLightDevice(id: string): boolean {
-    return id === 'main_light' || id === 'curtain';
-  }
-
-  private filteredDevices(): DeviceState[] {
-    if (this.deviceFilter === 'all') {
-      return this.devices;
-    }
-    const list: DeviceState[] = [];
-    for (const d of this.devices) {
-      const isLight = this.isLightDevice(d.id);
-      if (this.deviceFilter === 'light' && isLight) {
-        list.push(d);
-      }
-      if (this.deviceFilter === 'climate' && !isLight) {
-        list.push(d);
-      }
-    }
-    return list;
-  }
-
-  private groupCount(kind: string): number {
-    if (kind === 'all') {
-      return this.devices.length;
-    }
-    let n = 0;
-    for (const d of this.devices) {
-      const isLight = this.isLightDevice(d.id);
-      if (kind === 'light' && isLight) {
-        n = n + 1;
-      }
-      if (kind === 'climate' && !isLight) {
-        n = n + 1;
-      }
-    }
-    return n;
-  }
-
-  private groupBg(kind: string): string {
-    if (this.deviceFilter === kind) {
-      return ColorToken.brand;
-    }
-    return ColorToken.surfaceAlt;
-  }
-
-  private groupFg(kind: string): string {
-    if (this.deviceFilter === kind) {
-      return ColorToken.textInverse;
-    }
-    return ColorToken.textSecondary;
-  }
-
-  @Builder
-  GroupTab(label: string, kind: string) {
-    Text(label + ' ' + this.groupCount(kind).toString())
-      .fontSize(FontToken.label)
-      .fontColor(this.groupFg(kind))
-      .backgroundColor(this.groupBg(kind))
-      .padding({ left: 14, right: 14, top: 7, bottom: 7 })
-      .borderRadius(RadiusToken.pill)
-      .onClick(() => { this.deviceFilter = kind; })
-  }
-
   private sceneIcon(id: string): string {
     if (id === 'S1') {
       return '月';
@@ -665,15 +600,20 @@ struct Index {
     }.width('100%')
   }
 
-  private deviceIcon(id: string): string {
-    switch (id) {
-      case 'main_light': return '灯';
-      case 'ac': return '冷';
-      case 'curtain': return '帘';
-      case 'fan': return '风';
-      case 'humidifier': return '湿';
-      default: return '●';
+  private deviceImage(id: string): Resource {
+    if (id === 'main_light') {
+      return $r('app.media.dev_light');
     }
+    if (id === 'ac') {
+      return $r('app.media.dev_ac');
+    }
+    if (id === 'curtain') {
+      return $r('app.media.dev_curtain');
+    }
+    if (id === 'fan') {
+      return $r('app.media.dev_fan');
+    }
+    return $r('app.media.dev_humidifier');
   }
 
   private resolveNavColor(index: number): string {
@@ -702,13 +642,16 @@ struct Index {
   DeviceCard(d: DeviceState) {
     Column() {
       Row() {
-        Text(this.deviceIcon(d.id))
-          .fontSize(17)
-          .fontColor(d.power ? ColorToken.brand : ColorToken.textTertiary)
-          .width(SizeToken.iconBox).height(SizeToken.iconBox)
-          .textAlign(TextAlign.Center)
-          .backgroundColor(d.power ? ColorToken.accentSubtle : ColorToken.surfaceAlt)
-          .borderRadius(RadiusToken.pill)
+        Column() {
+          Image(this.deviceImage(d.id))
+            .width(28).height(28)
+            .objectFit(ImageFit.Contain)
+            .opacity(d.power ? 1 : 0.45)
+        }
+        .width(SizeToken.iconBox).height(SizeToken.iconBox)
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor(d.power ? ColorToken.accentSubtle : ColorToken.surfaceAlt)
+        .borderRadius(RadiusToken.pill)
         Blank()
         Text(d.power ? '开' : '关')
           .fontSize(FontToken.caption)
@@ -813,13 +756,8 @@ struct Index {
 
         Text('设备实时状态')
           .fontSize(FontToken.heading).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary).width('100%')
-        Row({ space: SpaceToken.sm }) {
-          this.GroupTab('全部', 'all')
-          this.GroupTab('照明', 'light')
-          this.GroupTab('温控', 'climate')
-        }.width('100%')
         Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
-          ForEach(this.filteredDevices(), (d: DeviceState) => {
+          ForEach(this.devices, (d: DeviceState) => {
             Column() {
               this.DeviceCard(d)
             }.width('48%').margin({ bottom: SpaceToken.md })
@@ -1192,12 +1130,16 @@ struct Index {
         Column({ space: SpaceToken.md }) {
           // 设备主卡
           Column() {
-            Text(this.deviceIcon(this.detailId))
-              .fontSize(30)
-              .fontColor(this.findDevice(this.detailId).power ? ColorToken.brand : ColorToken.textTertiary)
-              .width(88).height(88).textAlign(TextAlign.Center)
-              .backgroundColor(this.findDevice(this.detailId).power ? ColorToken.accentSubtle : ColorToken.surfaceAlt)
-              .borderRadius(RadiusToken.pill)
+            Column() {
+              Image(this.deviceImage(this.detailId))
+                .width(56).height(56)
+                .objectFit(ImageFit.Contain)
+                .opacity(this.findDevice(this.detailId).power ? 1 : 0.45)
+            }
+            .width(88).height(88)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor(this.findDevice(this.detailId).power ? ColorToken.accentSubtle : ColorToken.surfaceAlt)
+            .borderRadius(RadiusToken.pill)
             Text(this.findDevice(this.detailId).name)
               .fontSize(FontToken.title).fontColor(ColorToken.textPrimary).margin({ top: SpaceToken.md })
             Text(this.findDevice(this.detailId).power
