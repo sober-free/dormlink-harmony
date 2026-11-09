@@ -78,6 +78,11 @@ struct Index {
   @State reportException: number = 0;
   @State reportDuration: number = 0;
   @State reportTime: number = 0;
+  // ---- 设备详情 ----
+  @State showDetail: boolean = false;
+  @State detailId: string = 'main_light';
+  @State timerMinutes: number = 0;
+  private timerId: number = -1;
 
   async aboutToAppear(): Promise<void> {
     const result: RestoreResult = await DormStore.restore(this.getCtx());
@@ -595,7 +600,7 @@ struct Index {
     }.width('100%')
   }
 
-  private deviceIcon(id: DeviceId): string {
+  private deviceIcon(id: string): string {
     switch (id) {
       case 'main_light': return '灯';
       case 'ac': return '冷';
@@ -664,6 +669,11 @@ struct Index {
     .backgroundColor(ColorToken.surface)
     .borderRadius(RadiusToken.lg)
     .alignItems(HorizontalAlign.Start)
+    .onClick(() => {
+      this.detailId = d.id;
+      this.timerMinutes = 0;
+      this.showDetail = true;
+    })
   }
 
   @Builder
@@ -1001,6 +1011,236 @@ struct Index {
     .width('100%').height('100%').backgroundColor(ColorToken.canvas)
   }
 
+  private findDevice(id: string): DeviceState {
+    for (const d of this.devices) {
+      if (d.id === id) {
+        return d;
+      }
+    }
+    return { id: 'main_light', name: '主灯', power: false, value: 0, unit: '%' };
+  }
+
+  private deviceMin(id: string): number {
+    if (id === 'ac') {
+      return 16;
+    }
+    if (id === 'fan' || id === 'humidifier') {
+      return 0;
+    }
+    return 0;
+  }
+
+  private deviceMax(id: string): number {
+    if (id === 'ac') {
+      return 30;
+    }
+    if (id === 'fan' || id === 'humidifier') {
+      return 3;
+    }
+    return 100;
+  }
+
+  private setDevicePower(id: string, on: boolean): void {
+    const list: DeviceState[] = [];
+    for (const d of this.devices) {
+      if (d.id === id) {
+        list.push({ id: d.id, name: d.name, power: on, value: d.value, unit: d.unit });
+      } else {
+        list.push(d);
+      }
+    }
+    this.devices = list;
+    this.persistAll();
+  }
+
+  private setDeviceValue(id: string, value: number): void {
+    const list: DeviceState[] = [];
+    for (const d of this.devices) {
+      if (d.id === id) {
+        list.push({ id: d.id, name: d.name, power: d.power, value: value, unit: d.unit });
+      } else {
+        list.push(d);
+      }
+    }
+    this.devices = list;
+    this.persistAll();
+  }
+
+  /** 定时关闭：选择后按分钟数在后台触发，可再次选择取消 */
+  private setDeviceTimer(minutes: number): void {
+    if (this.timerId >= 0) {
+      clearTimeout(this.timerId);
+      this.timerId = -1;
+    }
+    this.timerMinutes = minutes;
+    if (minutes > 0) {
+      const targetId: string = this.detailId;
+      this.timerId = setTimeout(() => {
+        this.setDevicePower(targetId, false);
+        this.timerMinutes = 0;
+        this.timerId = -1;
+        this.showToast('定时关闭已执行：' + targetId);
+      }, minutes * 60000);
+      this.showToast('已设定 ' + minutes + ' 分钟后关闭');
+    } else {
+      this.showToast('已取消定时');
+    }
+  }
+
+  private timerPillStyle(m: number): string {
+    if (this.timerMinutes === m) {
+      return ColorToken.brand;
+    }
+    return ColorToken.surfaceAlt;
+  }
+
+  private timerPillColor(m: number): string {
+    if (this.timerMinutes === m) {
+      return ColorToken.textInverse;
+    }
+    return ColorToken.textSecondary;
+  }
+
+  @Builder
+  DeviceDetailPanel() {
+    Column() {
+      Row() {
+        Text('‹ 返回')
+          .fontSize(FontToken.body).fontColor(ColorToken.textSecondary)
+          .onClick(() => { this.showDetail = false; })
+        Blank()
+        Text(this.findDevice(this.detailId).name)
+          .fontSize(FontToken.title).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+        Blank()
+        Text('   ')
+          .fontSize(FontToken.body)
+      }
+      .width('100%').padding({ top: SpaceToken.sm, bottom: SpaceToken.md })
+
+      Scroll() {
+        Column({ space: SpaceToken.md }) {
+          // 设备主卡
+          Column() {
+            Text(this.deviceIcon(this.detailId))
+              .fontSize(30)
+              .fontColor(this.findDevice(this.detailId).power ? ColorToken.brand : ColorToken.textTertiary)
+              .width(88).height(88).textAlign(TextAlign.Center)
+              .backgroundColor(this.findDevice(this.detailId).power ? ColorToken.accentSubtle : ColorToken.surfaceAlt)
+              .borderRadius(RadiusToken.pill)
+            Text(this.findDevice(this.detailId).name)
+              .fontSize(FontToken.title).fontColor(ColorToken.textPrimary).margin({ top: SpaceToken.md })
+            Text(this.findDevice(this.detailId).power
+              ? '已开启 · ' + this.findDevice(this.detailId).value.toString() + this.findDevice(this.detailId).unit
+              : '已关闭')
+              .fontSize(FontToken.caption)
+              .fontColor(this.findDevice(this.detailId).power ? ColorToken.success : ColorToken.textTertiary)
+              .margin({ top: 4 })
+          }
+          .width('100%').padding(SpaceToken.xl)
+          .backgroundColor(ColorToken.surface)
+          .borderRadius(RadiusToken.lg)
+          .alignItems(HorizontalAlign.Center)
+
+          // 开关
+          Row() {
+            Text('电源开关').fontSize(FontToken.body).fontColor(ColorToken.textPrimary)
+            Blank()
+            Toggle({ type: ToggleType.Switch, isOn: this.findDevice(this.detailId).power })
+              .selectedColor(ColorToken.brand)
+              .onChange((on: boolean) => {
+                if (on !== this.findDevice(this.detailId).power) {
+                  this.setDevicePower(this.detailId, on);
+                }
+              })
+          }
+          .width('100%').padding(SpaceToken.lg)
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+
+          // 参数调节
+          Column() {
+            Row() {
+              Text(this.detailId === 'ac' ? '目标温度' : (this.detailId === 'curtain' ? '开合度' :
+                   (this.detailId === 'main_light' ? '亮度' : '档位')))
+                .fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+              Text(this.findDevice(this.detailId).value.toString() + this.findDevice(this.detailId).unit)
+                .fontSize(FontToken.body).fontColor(ColorToken.brand)
+            }.width('100%')
+            Slider({
+              value: this.findDevice(this.detailId).value,
+              min: this.deviceMin(this.detailId),
+              max: this.deviceMax(this.detailId),
+              step: 1,
+              style: SliderStyle.OutSet
+            })
+              .selectedColor(ColorToken.brand)
+              .trackColor(ColorToken.surfaceAlt)
+              .width('100%').margin({ top: SpaceToken.sm })
+              .onChange((v: number, mode: SliderChangeMode) => {
+                const nv = Math.round(v);
+                if (nv !== this.findDevice(this.detailId).value) {
+                  this.setDeviceValue(this.detailId, nv);
+                }
+              })
+          }
+          .width('100%').padding(SpaceToken.lg)
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .alignItems(HorizontalAlign.Start)
+
+          // 定时关闭
+          Column() {
+            Text('定时关闭').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).width('100%')
+            Row({ space: SpaceToken.sm }) {
+              Text('不定时')
+                .fontSize(FontToken.label)
+                .fontColor(this.timerPillColor(0))
+                .backgroundColor(this.timerPillStyle(0))
+                .padding({ left: 14, right: 14, top: 7, bottom: 7 })
+                .borderRadius(RadiusToken.pill)
+                .onClick(() => { this.setDeviceTimer(0); })
+              Text('30 分钟')
+                .fontSize(FontToken.label)
+                .fontColor(this.timerPillColor(30))
+                .backgroundColor(this.timerPillStyle(30))
+                .padding({ left: 14, right: 14, top: 7, bottom: 7 })
+                .borderRadius(RadiusToken.pill)
+                .onClick(() => { this.setDeviceTimer(30); })
+              Text('1 小时')
+                .fontSize(FontToken.label)
+                .fontColor(this.timerPillColor(60))
+                .backgroundColor(this.timerPillStyle(60))
+                .padding({ left: 14, right: 14, top: 7, bottom: 7 })
+                .borderRadius(RadiusToken.pill)
+                .onClick(() => { this.setDeviceTimer(60); })
+            }.width('100%').margin({ top: SpaceToken.md })
+          }
+          .width('100%').padding(SpaceToken.lg)
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .alignItems(HorizontalAlign.Start)
+
+          // 设备信息
+          Column({ space: SpaceToken.sm }) {
+            Row() {
+              Text('设备 ID').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).layoutWeight(1)
+              Text(this.detailId).fontSize(FontToken.caption).fontColor(ColorToken.textPrimary)
+            }.width('100%')
+            Row() {
+              Text('计量单位').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).layoutWeight(1)
+              Text(this.findDevice(this.detailId).unit).fontSize(FontToken.caption).fontColor(ColorToken.textPrimary)
+            }.width('100%')
+          }
+          .width('100%').padding(SpaceToken.lg)
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+        }
+        .padding({ bottom: 40 })
+      }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+    }
+    .width('100%').height('100%')
+    .padding({ left: SpaceToken.lg, right: SpaceToken.lg })
+    .backgroundColor(ColorToken.canvas)
+  }
+
   @Builder
   ReportPanel() {
     Column() {
@@ -1069,6 +1309,9 @@ struct Index {
       }
       if (this.showReport) {
         this.ReportPanel()
+      }
+      if (this.showDetail) {
+        this.DeviceDetailPanel()
       }
       // toast 放在 Stack 最上层，保证规则编辑器等覆盖层打开时也能看到提示
       if (this.toast.length > 0) {
