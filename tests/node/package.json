@@ -1,0 +1,10 @@
+{
+  "name": "dormlink-engine-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DormLink 规则引擎纯逻辑测试，直接加载 HarmonyOS 工程源码",
+  "scripts": {
+    "test": "node --test rule-engine.test.mjs"
+  }
+}
