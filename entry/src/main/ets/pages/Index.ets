@@ -552,20 +552,52 @@ struct Index {
     }.width('100%')
   }
 
+  private deviceIcon(id: DeviceId): string {
+    switch (id) {
+      case 'main_light': return '☀';
+      case 'ac': return '❄';
+      case 'curtain': return '▤';
+      case 'fan': return '✳';
+      case 'humidifier': return '◍';
+      default: return '●';
+    }
+  }
+
   @Builder
   DeviceCard(d: DeviceState) {
-    Row() {
-      Column() {
-        Text(d.name).fontSize(FontToken.heading).fontColor(ColorToken.textPrimary)
-        Text(d.power ? '运行中 · ' + d.value.toString() + d.unit : '已关闭')
-          .fontSize(FontToken.label).fontColor(d.power ? ColorToken.success : ColorToken.textTertiary).margin({ top: 3 })
-      }.alignItems(HorizontalAlign.Start).layoutWeight(1)
-      Text(d.power ? 'ON' : 'OFF')
-        .fontSize(FontToken.label).fontColor(d.power ? ColorToken.success : ColorToken.textTertiary)
-        .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-        .backgroundColor(d.power ? ColorToken.successBg : ColorToken.border).borderRadius(RadiusToken.md)
+    Column() {
+      Row() {
+        Text(this.deviceIcon(d.id))
+          .fontSize(18)
+          .fontColor(d.power ? ColorToken.success : ColorToken.textTertiary)
+          .width(42).height(42)
+          .textAlign(TextAlign.Center)
+          .backgroundColor(d.power ? ColorToken.successBg : ColorToken.surfaceAlt)
+          .borderRadius(RadiusToken.pill)
+        Column() {
+          Text(d.name).fontSize(FontToken.title).fontColor(ColorToken.textPrimary)
+          Text(d.power ? '运行中 · ' + d.value.toString() + d.unit : '已关闭')
+            .fontSize(FontToken.caption).fontColor(d.power ? ColorToken.success : ColorToken.textTertiary)
+            .margin({ top: 2 })
+        }.alignItems(HorizontalAlign.Start).layoutWeight(1).margin({ left: SpaceToken.md })
+        Text(d.power ? 'ON' : 'OFF')
+          .fontSize(FontToken.caption)
+          .fontColor(d.power ? ColorToken.textInverse : ColorToken.textTertiary)
+          .backgroundColor(d.power ? ColorToken.success : ColorToken.surfaceAlt)
+          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+          .borderRadius(RadiusToken.pill)
+      }.width('100%').alignItems(VerticalAlign.Center)
+      if (d.power) {
+        Progress({ value: d.value, total: 100, type: ProgressType.Linear })
+          .color(ColorToken.success)
+          .backgroundColor(ColorToken.surfaceAlt)
+          .width('100%').height(4).margin({ top: SpaceToken.md })
+      }
     }
-    .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
+    .width('100%').padding(SpaceToken.lg)
+    .backgroundColor(ColorToken.surface)
+    .borderRadius(RadiusToken.lg)
+    .border({ width: SizeToken.borderWidth, color: d.power ? ColorToken.success : ColorToken.border })
   }
 
   @Builder
@@ -602,11 +634,26 @@ struct Index {
 
         Column() {
           Text('本次演练结果').fontSize(FontToken.heading).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
-          Text('触发规则 ' + this.triggered.length + ' 条 · 执行动作 ' + this.executedCount +
-               ' 个 · 冲突拦截 ' + this.blockedCount + ' 个')
-            .fontSize(FontToken.label).fontColor(ColorToken.textPrimary).margin({ top: 6 })
+          Row() {
+            Column() {
+              Text(this.triggered.length.toString())
+                .fontSize(26).fontWeight(FontWeight.Medium).fontColor(ColorToken.accent)
+              Text('触发规则').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
+            }.layoutWeight(1).alignItems(HorizontalAlign.Center)
+            Column() {
+              Text(this.executedCount.toString())
+                .fontSize(26).fontWeight(FontWeight.Medium).fontColor(ColorToken.success)
+              Text('执行动作').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
+            }.layoutWeight(1).alignItems(HorizontalAlign.Center)
+            Column() {
+              Text(this.blockedCount.toString())
+                .fontSize(26).fontWeight(FontWeight.Medium)
+                .fontColor(this.blockedCount > 0 ? ColorToken.warning : ColorToken.textTertiary)
+              Text('冲突拦截').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
+            }.layoutWeight(1).alignItems(HorizontalAlign.Center)
+          }.width('100%').margin({ top: SpaceToken.md })
           Text('触发顺序：' + (this.triggered.length > 0 ? this.triggered.join(' → ') : '暂无'))
-            .fontSize(FontToken.label).fontColor(ColorToken.accent).margin({ top: 4 })
+            .fontSize(FontToken.label).fontColor(ColorToken.accent).margin({ top: SpaceToken.sm })
         }
         .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
         .alignItems(HorizontalAlign.Start)
@@ -615,7 +662,7 @@ struct Index {
         ForEach(this.devices, (d: DeviceState) => {
           this.DeviceCard(d)
         }, (d: DeviceState) => d.id + '|' + (d.power ? '1' : '0') + '|' + d.value.toString())
-      }.padding({ left: SpaceToken.lg, right: SpaceToken.lg, top: SpaceToken.lg, bottom: 80 })
+      }.padding(SpaceToken.lg).margin({ bottom: 80 })
     }.layoutWeight(1)
   }
 
@@ -668,7 +715,7 @@ struct Index {
         ForEach(this.rules, (r: AutomationRule) => {
           this.RuleCard(r)
         }, (r: AutomationRule) => r.id + '|' + (r.enabled ? '1' : '0') + '|' + r.priority.toString())
-      }.padding({ left: SpaceToken.lg, right: SpaceToken.lg, top: SpaceToken.lg, bottom: 80 })
+      }.padding(SpaceToken.lg).margin({ bottom: 80 })
     }.layoutWeight(1)
   }
 
@@ -725,7 +772,7 @@ struct Index {
           .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
           .alignItems(HorizontalAlign.Start)
         }
-      }.padding({ left: SpaceToken.lg, right: SpaceToken.lg, top: SpaceToken.lg, bottom: 80 })
+      }.padding(SpaceToken.lg).margin({ bottom: 80 })
     }.layoutWeight(1)
   }
 
@@ -789,7 +836,7 @@ struct Index {
         }.width('100%').margin({ top: 8 })
         Text('提示：结束应用进程后重新打开，规则、设备状态与最近 50 条执行记录会自动恢复。')
           .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
-      }.padding({ left: SpaceToken.lg, right: SpaceToken.lg, top: SpaceToken.lg, bottom: 80 })
+      }.padding(SpaceToken.lg).margin({ bottom: 80 })
     }.layoutWeight(1)
   }
 
