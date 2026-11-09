@@ -624,15 +624,16 @@ struct Index {
   }
 
   @Builder
-  TabCell(label: string, icon: string, index: number) {
+  TabCell(label: string, iconOn: Resource, iconOff: Resource, index: number) {
     Column() {
-      Text(icon)
-        .fontSize(19)
-        .fontColor(this.resolveNavColor(index))
+      Image(this.currentTab === index ? iconOn : iconOff)
+        .width(24).height(24)
+        .objectFit(ImageFit.Contain)
       Text(label)
         .fontSize(FontToken.caption)
+        .fontWeight(this.currentTab === index ? FontWeight.Medium : FontWeight.Regular)
         .fontColor(this.resolveNavColor(index))
-        .margin({ top: 2 })
+        .margin({ top: 3 })
     }
     .width('100%').height('100%')
     .justifyContent(FlexAlign.Center)
@@ -1305,10 +1306,10 @@ struct Index {
       Column() {
         this.HeaderBar()
         Tabs({ barPosition: BarPosition.End }) {
-          TabContent() { this.DashboardPanel() }.tabBar(this.TabCell('联动台', '◉', 0))
-          TabContent() { this.RulePanel() }.tabBar(this.TabCell('规则', '▤', 1))
-          TabContent() { this.ScenePanel() }.tabBar(this.TabCell('演练', '▶', 2))
-          TabContent() { this.LogPanel() }.tabBar(this.TabCell('日志', '▦', 3))
+          TabContent() { this.DashboardPanel() }.tabBar(this.TabCell('联动台', $r('app.media.tab_home_on'), $r('app.media.tab_home_off'), 0))
+          TabContent() { this.RulePanel() }.tabBar(this.TabCell('规则', $r('app.media.tab_rule_on'), $r('app.media.tab_rule_off'), 1))
+          TabContent() { this.ScenePanel() }.tabBar(this.TabCell('演练', $r('app.media.tab_scene_on'), $r('app.media.tab_scene_off'), 2))
+          TabContent() { this.LogPanel() }.tabBar(this.TabCell('日志', $r('app.media.tab_log_on'), $r('app.media.tab_log_off'), 3))
         }
         .barHeight(58)
         .layoutWeight(1)
