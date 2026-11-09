@@ -341,10 +341,13 @@ export function evaluate(rawEnv: Environment, devices: DeviceState[], rules: Aut
     if (issues.length > 0) continue;
     if (isRuleTriggered(env, rule)) {
       triggered.push(rule);
-      triggeredRuleIds.push(rule.id);
     }
   }
   triggered.sort(compareRules);
+  // 触发顺序以排序后的执行顺序为准；此前直接按输入顺序收集，会与实际执行顺序不一致
+  for (const r of triggered) {
+    triggeredRuleIds.push(r.id);
+  }
 
   const occupied = new Map<DeviceId, string>();
   let order = 0;
@@ -450,4 +453,212 @@ export function deserializeState(text: string): PersistedState | null {
   } catch (error) {
     return null;
   }
+}
+
+/* ==================== 应用内自检（测试报告生成） ==================== */
+
+export interface SelfTestCase {
+  id: string;
+  category: string;
+  name: string;
+  passed: boolean;
+  detail: string;
+}
+
+export interface SelfTestReport {
+  total: number;
+  passed: number;
+  failed: number;
+  normalCount: number;
+  boundaryCount: number;
+  exceptionCount: number;
+  durationMs: number;
+  generatedAt: number;
+  cases: SelfTestCase[];
+}
+
+function stDevices(): DeviceState[] {
+  return [
+    { id: 'main_light', name: '主灯', power: false, value: 0, unit: '%' },
+    { id: 'ac', name: '空调', power: false, value: 26, unit: '℃' },
+    { id: 'curtain', name: '窗帘', power: false, value: 0, unit: '%' },
+    { id: 'fan', name: '风扇', power: false, value: 0, unit: '档' },
+    { id: 'humidifier', name: '加湿器', power: false, value: 0, unit: '档' }
+  ];
+}
+
+function stPower(devices: DeviceState[], id: DeviceId): boolean {
+  for (const d of devices) {
+    if (d.id === id) return d.power;
+  }
+  return false;
+}
+
+function stValue(devices: DeviceState[], id: DeviceId): number {
+  for (const d of devices) {
+    if (d.id === id) return d.value;
+  }
+  return -1;
+}
+
+function stEnv(t: number, lux: number, hum: number, h: number, occ: boolean): Environment {
+  return { temperature: t, illuminance: lux, humidity: hum, hour: h, occupancy: occ };
+}
+
+function stRule(id: string, priority: number, conditions: Condition[], actions: DeviceAction[]): AutomationRule {
+  return {
+    id: id, name: id, enabled: true, priority: priority,
+    conditions: conditions, actions: actions, description: ''
+  };
+}
+
+/**
+ * 在设备上真实执行一组规则引擎断言并生成测试报告。
+ * 与 tests/node/rule-engine.test.mjs 覆盖同一批业务规则，但完全在应用进程内运行，
+ * 用于「日志页 → 生成测试报告」入口，给现场演示和验收留证。
+ */
+export function runSelfTest(): SelfTestReport {
+  const started = Date.now();
+  const cases: SelfTestCase[] = [];
+
+  // ---------- 正常 5 条 ----------
+  const n1 = evaluate(stEnv(31, 320, 52, 20, true), stDevices(), [
+    stRule('R002', 20, [{ metric: 'temperature', op: 'GE', value: 28 }],
+      [{ deviceId: 'ac', power: true, value: 26 }])
+  ]);
+  cases.push({
+    id: 'N1', category: '正常', name: '单条件触发后设备按动作改变',
+    passed: stPower(n1.devices, 'ac') === true && stValue(n1.devices, 'ac') === 26 && n1.records.length === 1,
+    detail: '空调 ' + (stPower(n1.devices, 'ac') ? '开' : '关') + ' ' + stValue(n1.devices, 'ac') + '℃，记录 ' + n1.records.length + ' 条'
+  });
+
+  const r001 = stRule('R001', 10,
+    [{ metric: 'hour', op: 'GE', value: 22 }, { metric: 'occupancy', op: 'EQ', value: 1 }],
+    [{ deviceId: 'main_light', power: true, value: 60 }]);
+  const n2a = isRuleTriggered(stEnv(26, 300, 50, 23, true), r001);
+  const n2b = isRuleTriggered(stEnv(26, 300, 50, 21, true), r001);
+  const n2c = isRuleTriggered(stEnv(26, 300, 50, 23, false), r001);
+  cases.push({
+    id: 'N2', category: '正常', name: '双条件规则为 AND 关系',
+    passed: n2a === true && n2b === false && n2c === false,
+    detail: '23点+有人=' + n2a + '，21点=' + n2b + '，无人=' + n2c
+  });
+
+  const n3 = evaluate(stEnv(30, 60, 58, 23, true), stDevices(), [
+    stRule('R002', 20, [{ metric: 'temperature', op: 'GE', value: 28 }],
+      [{ deviceId: 'ac', power: true, value: 26 }]),
+    r001
+  ]);
+  cases.push({
+    id: 'N3', category: '正常', name: '多条规则按优先级升序执行',
+    passed: n3.triggeredRuleIds.length === 2 && n3.triggeredRuleIds[0] === 'R001' && n3.triggeredRuleIds[1] === 'R002',
+    detail: '触发顺序 ' + n3.triggeredRuleIds.join(' → ')
+  });
+
+  const r005 = stRule('R005', 50, [{ metric: 'occupancy', op: 'EQ', value: 0 }],
+    [{ deviceId: 'ac', power: false, value: 26 }]);
+  const r002b = stRule('R002', 20, [{ metric: 'temperature', op: 'GE', value: 28 }],
+    [{ deviceId: 'ac', power: true, value: 26 }]);
+  const n4 = evaluate(stEnv(31, 900, 42, 14, false), stDevices(), [r002b, r005]);
+  cases.push({
+    id: 'N4', category: '正常', name: '冲突裁决：高优先级规则胜出',
+    passed: stPower(n4.devices, 'ac') === true && n4.conflicts.length === 1 && n4.conflicts[0].winnerRuleId === 'R002',
+    detail: '空调 ' + (stPower(n4.devices, 'ac') ? '开' : '关') + '，冲突 ' + n4.conflicts.length + ' 处，胜出 ' + (n4.conflicts.length > 0 ? n4.conflicts[0].winnerRuleId : '无')
+  });
+
+  const r005b = stRule('R005', 50, [{ metric: 'occupancy', op: 'EQ', value: 0 }],
+    [{ deviceId: 'main_light', power: false, value: 0 },
+     { deviceId: 'ac', power: false, value: 26 },
+     { deviceId: 'fan', power: false, value: 0 }]);
+  const n5 = evaluate(stEnv(31, 900, 42, 14, false), stDevices(), [r002b, r005b]);
+  let blocked = 0;
+  for (const rec of n5.records) {
+    if (rec.blocked) blocked = blocked + 1;
+  }
+  cases.push({
+    id: 'N5', category: '正常', name: '冲突只拦截争用设备，其余动作照常执行',
+    passed: blocked === 1 && stPower(n5.devices, 'main_light') === false && stPower(n5.devices, 'fan') === false,
+    detail: '拦截 ' + blocked + ' 个，主灯/风扇仍执行关闭'
+  });
+
+  // ---------- 边界 3 条 ----------
+  const b1a = isRuleTriggered(stEnv(28, 300, 50, 20, true), r002b);
+  const b1b = isRuleTriggered(stEnv(27, 300, 50, 20, true), r002b);
+  cases.push({
+    id: 'B1', category: '边界', name: '阈值等号边界：28 命中、27 不命中',
+    passed: b1a === true && b1b === false,
+    detail: '28℃=' + b1a + '，27℃=' + b1b
+  });
+
+  const b2a = normalizeEnvironment(stEnv(26, 300, 50, 0, true)).hour;
+  const b2b = normalizeEnvironment(stEnv(26, 300, 50, 23, true)).hour;
+  const b2c = isRuleTriggered(stEnv(26, 300, 50, 23, true), r001);
+  cases.push({
+    id: 'B2', category: '边界', name: '时段边界 hour=0 与 23 归一化正确',
+    passed: b2a === 0 && b2b === 23 && b2c === true,
+    detail: 'hour0=' + b2a + '，hour23=' + b2b + '，R001 命中=' + b2c
+  });
+
+  const b3 = evaluate(stEnv(26, 300, 50, 20, true), stDevices(), []);
+  cases.push({
+    id: 'B3', category: '边界', name: '空规则列表时设备状态不变',
+    passed: b3.records.length === 0 && b3.devices.length === 5 && b3.warnings.length > 0,
+    detail: '记录 ' + b3.records.length + ' 条，告警 ' + b3.warnings.length + ' 条'
+  });
+
+  // ---------- 异常 4 条 ----------
+  const e1 = normalizeEnvironment(stEnv(999, -50, 200, 30, true));
+  cases.push({
+    id: 'E1', category: '异常', name: '环境数值越界自动裁剪到合法区间',
+    passed: e1.temperature === 50 && e1.illuminance === 0 && e1.humidity === 100 && e1.hour === 23,
+    detail: '999→' + e1.temperature + '，-50→' + e1.illuminance + '，200→' + e1.humidity
+  });
+
+  const e2a = matchCondition(stEnv(26, 300, 50, 20, true), { metric: 'temperature', op: 'GE', value: Number.NaN });
+  const e2b = matchCondition(stEnv(Number.NaN, 300, 50, 20, true), { metric: 'temperature', op: 'GE', value: 10 });
+  cases.push({
+    id: 'E2', category: '异常', name: 'NaN 阈值 / NaN 环境值判定为 false 且不抛异常',
+    passed: e2a === false && e2b === false,
+    detail: 'NaN阈值=' + e2a + '，NaN环境=' + e2b
+  });
+
+  const bad = stRule('RBAD', 20, [], []);
+  const issues = validateRule(bad);
+  const e3 = evaluate(stEnv(31, 300, 50, 20, true), stDevices(), [bad]);
+  cases.push({
+    id: 'E3', category: '异常', name: '非法规则被校验拦截且不参与演练',
+    passed: issues.length >= 2 && e3.executedCount === 0,
+    detail: '问题 ' + issues.length + ' 项，执行动作 ' + e3.executedCount + ' 个'
+  });
+
+  const e4a = deserializeState('{ broken json');
+  const e4b = deserializeState('');
+  cases.push({
+    id: 'E4', category: '异常', name: '损坏存档反序列化返回 null',
+    passed: e4a === null && e4b === null,
+    detail: '损坏 JSON=' + (e4a === null ? 'null' : 'object') + '，空串=' + (e4b === null ? 'null' : 'object')
+  });
+
+  let passed = 0;
+  let normalCount = 0;
+  let boundaryCount = 0;
+  let exceptionCount = 0;
+  for (const c of cases) {
+    if (c.passed) passed = passed + 1;
+    if (c.category === '正常') normalCount = normalCount + 1;
+    if (c.category === '边界') boundaryCount = boundaryCount + 1;
+    if (c.category === '异常') exceptionCount = exceptionCount + 1;
+  }
+
+  return {
+    total: cases.length,
+    passed: passed,
+    failed: cases.length - passed,
+    normalCount: normalCount,
+    boundaryCount: boundaryCount,
+    exceptionCount: exceptionCount,
+    durationMs: Date.now() - started,
+    generatedAt: Date.now(),
+    cases: cases
+  };
 }

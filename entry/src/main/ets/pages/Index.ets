@@ -3,7 +3,7 @@ import {
   AutomationRule, Condition, DeviceAction, DeviceState, Environment,
   ExecutionRecord, ConflictRecord, MetricKey, CompareOp, DeviceId,
   evaluate, normalizeEnvironment, cloneDevices, cloneRule, validateRule,
-  describeCondition, metricLabel, opLabel
+  describeCondition, metricLabel, opLabel, runSelfTest, SelfTestCase
 } from '../engine/RuleEngine';
 import {
   DEFAULT_ENVIRONMENT, DEFAULT_DEVICES, SCENE_PRESETS, ScenePreset
@@ -67,6 +67,16 @@ struct Index {
   @State editorIsNew: boolean = true;
   @State draft: AutomationRule = makeNewRule();
   @State activeScene: string = '';
+  // ---- 应用内自检报告 ----
+  @State showReport: boolean = false;
+  @State reportCases: SelfTestCase[] = [];
+  @State reportTotal: number = 0;
+  @State reportPassed: number = 0;
+  @State reportNormal: number = 0;
+  @State reportBoundary: number = 0;
+  @State reportException: number = 0;
+  @State reportDuration: number = 0;
+  @State reportTime: number = 0;
 
   async aboutToAppear(): Promise<void> {
     const result: RestoreResult = await DormStore.restore(this.getCtx());
@@ -446,6 +456,21 @@ struct Index {
     this.persistAll();
   }
 
+  /** 应用内自检：在本进程真实执行规则引擎断言并生成报告 */
+  private generateReport(): void {
+    const r = runSelfTest();
+    this.reportTotal = r.total;
+    this.reportPassed = r.passed;
+    this.reportNormal = r.normalCount;
+    this.reportBoundary = r.boundaryCount;
+    this.reportException = r.exceptionCount;
+    this.reportDuration = r.durationMs;
+    this.reportTime = r.generatedAt;
+    this.reportCases = r.cases;
+    this.showReport = true;
+    this.showToast('自检完成：' + r.passed + ' / ' + r.total + ' 通过');
+  }
+
   private conditionText(r: AutomationRule): string {
     const parts: string[] = [];
     for (const c of r.conditions) parts.push(describeCondition(c));
@@ -485,11 +510,6 @@ struct Index {
       }.width('100%')
       Text(this.restoreMessage)
         .fontSize(11).fontColor('#9FB3C8').margin({ top: 8 })
-      if (this.toast.length > 0) {
-        Text(this.toast)
-          .fontSize(12).fontColor('#0B1220').backgroundColor('#6FD3A8')
-          .padding(8).borderRadius(6).width('100%').margin({ top: 8 })
-      }
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 14, bottom: 10 })
@@ -757,6 +777,9 @@ struct Index {
           .width('100%').padding(12).backgroundColor('#3A2C18').borderRadius(10)
           .alignItems(HorizontalAlign.Start)
         }
+        Button('生成测试报告')
+          .fontSize(14).backgroundColor('#2E7FB8').width('100%').margin({ top: 8 })
+          .onClick(() => { this.generateReport(); })
         Row({ space: 10 }) {
           Button('清空执行记录').fontSize(13).backgroundColor('#2C435C').layoutWeight(1)
             .onClick(() => { this.clearRecords(); })
@@ -848,6 +871,52 @@ struct Index {
     .width('100%').height('100%').backgroundColor('#0B1220')
   }
 
+  @Builder
+  ReportPanel() {
+    Column() {
+      Column({ space: 8 }) {
+        Text('规则引擎自检报告').fontSize(19).fontColor('#E6F1FB')
+        Text('生成时间 ' + this.formatTime(this.reportTime) + ' · 耗时 ' + this.reportDuration + ' ms')
+          .fontSize(11).fontColor('#9FB3C8')
+        Row({ space: 18 }) {
+          Text('通过 ' + this.reportPassed).fontSize(16).fontColor('#6FD3A8')
+          Text('失败 ' + (this.reportTotal - this.reportPassed))
+            .fontSize(16).fontColor(this.reportTotal - this.reportPassed > 0 ? '#F08A8A' : '#8497AC')
+          Text('共 ' + this.reportTotal + ' 条').fontSize(16).fontColor('#E6F1FB')
+        }.width('100%').margin({ top: 4 })
+        Text('正常 ' + this.reportNormal + ' 条 · 边界 ' + this.reportBoundary + ' 条 · 异常 ' + this.reportException + ' 条')
+          .fontSize(12).fontColor('#4FC3E8')
+      }
+      .width('100%').padding(16).backgroundColor('#16263B').borderRadius(12)
+      .alignItems(HorizontalAlign.Start)
+
+      Scroll() {
+        Column({ space: 8 }) {
+          ForEach(this.reportCases, (c: SelfTestCase) => {
+            Row() {
+              Text(c.passed ? '✓' : '✗')
+                .fontSize(15).fontColor(c.passed ? '#6FD3A8' : '#F08A8A').width(22)
+              Column() {
+                Text(c.category + ' · ' + c.name)
+                  .fontSize(13).fontColor('#E6F1FB')
+                Text(c.detail).fontSize(11).fontColor('#9FB3C8').margin({ top: 3 })
+              }.alignItems(HorizontalAlign.Start).layoutWeight(1)
+            }
+            .width('100%').padding(10).backgroundColor('#16263B').borderRadius(8)
+            .alignItems(VerticalAlign.Top)
+          }, (c: SelfTestCase) => c.id + (c.passed ? '1' : '0'))
+        }.padding({ left: 16, right: 16, top: 12, bottom: 12 })
+      }
+      .layoutWeight(1)
+
+      Button('关闭')
+        .fontSize(14).backgroundColor('#2C435C').width('100%').margin({ bottom: 18 })
+        .onClick(() => { this.showReport = false; })
+    }
+    .width('100%').height('100%').backgroundColor('#0B1220')
+    .padding({ top: 16, left: 16, right: 16 })
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
@@ -867,6 +936,21 @@ struct Index {
 
       if (this.showEditor) {
         this.RuleEditorPanel()
+      }
+      if (this.showReport) {
+        this.ReportPanel()
+      }
+      // toast 放在 Stack 最上层，保证规则编辑器等覆盖层打开时也能看到提示
+      if (this.toast.length > 0) {
+        Column() {
+          Text(this.toast)
+            .fontSize(13).fontColor('#0B1220').backgroundColor('#6FD3A8')
+            .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+            .borderRadius(8)
+        }
+        .width('100%').padding({ left: 16, right: 16 })
+        .margin({ top: 72 })
+        .alignItems(HorizontalAlign.Center)
       }
     }
     .width('100%').height('100%')

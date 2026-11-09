@@ -113,6 +113,19 @@ test('[正常 7] 停用规则不参与判定；重新启用后恢复生效', () 
   assert.equal(b.triggeredRuleIds.includes('R002'), true);
 });
 
+test('[正常 8] 输入顺序与优先级相反时，触发顺序仍按优先级升序（回归）', () => {
+  const r2 = ruleById('R002'); // priority 20
+  const r1 = ruleById('R001'); // priority 10
+  const result = evaluate(
+    ENV({ temperature: 30, hour: 23, occupancy: true }),
+    cloneDevices(DEFAULT_DEVICES),
+    [r2, r1] // 故意把低优先级的 R002 放在前面
+  );
+  assert.deepEqual(result.triggeredRuleIds, ['R001', 'R002'], '触发顺序必须按优先级，而不是输入顺序');
+  assert.equal(result.records[0].ruleId, 'R001');
+  assert.equal(result.records[1].ruleId, 'R002');
+});
+
 // ---------------------------------------------------------------- 边界用例
 
 test('[边界 1] 比较阈值边界：28 命中，27 不命中；LE 边界 35 命中，36 不命中', () => {
