@@ -61,6 +61,8 @@ struct Index {
   @State restoreMessage: string = '正在读取本地存档…';
   @State restored: boolean = false;
   @State toast: string = '';
+  /** 恢复阶段置 true：避免 Slider 初始化触发的保存覆盖「已从 Preferences 恢复…」提示 */
+  @State restoring: boolean = true;
   @State showEditor: boolean = false;
   @State editorIsNew: boolean = true;
   @State draft: AutomationRule = makeNewRule();
@@ -71,6 +73,7 @@ struct Index {
     this.applySnapshot(result.snapshot);
     this.restoreMessage = result.message;
     this.restored = result.restored;
+    this.restoring = false;
   }
 
   private getCtx(): common.Context {
@@ -85,6 +88,16 @@ struct Index {
     this.conflicts = s.conflicts;
     this.warnings = s.warnings;
     this.savedAt = s.savedAt;
+    // 由恢复的执行记录回算摘要，避免界面显示「0 条」与日志内容不一致
+    let executed = 0;
+    const trig: string[] = [];
+    for (const r of s.records) {
+      if (!r.blocked) executed++;
+      if (trig.indexOf(r.ruleId) < 0) trig.push(r.ruleId);
+    }
+    this.executedCount = executed;
+    this.blockedCount = s.conflicts.length;
+    this.triggered = trig;
   }
 
   private async persistAll(): Promise<void> {
@@ -101,6 +114,9 @@ struct Index {
     const ok = await DormStore.persist(this.getCtx(), snap, now);
     if (ok) {
       this.savedAt = now;
+      if (!this.restoring) {
+        this.restoreMessage = '本次改动已写入 Preferences 存档，结束进程后重开可恢复';
+      }
     } else {
       this.showToast('存档写入失败，请检查应用存储权限');
     }
@@ -145,6 +161,9 @@ struct Index {
   }
 
   private setOccupancy(on: boolean): void {
+    if (on === this.env.occupancy) {
+      return; // 初始化回填回调，值未变化，不触发保存
+    }
     const e = this.env;
     this.env = {
       temperature: e.temperature, illuminance: e.illuminance, humidity: e.humidity,
@@ -458,8 +477,8 @@ struct Index {
             .fontSize(12).fontColor('#9FB3C8').margin({ top: 2 })
         }.alignItems(HorizontalAlign.Start).layoutWeight(1)
         Column() {
-          Text(this.restored ? '已恢复存档' : '当前方案')
-            .fontSize(11).fontColor(this.restored ? '#6FD3A8' : '#F5B971')
+          Text(this.restored ? '已恢复存档' : (this.savedAt > 0 ? '已保存方案' : '当前方案'))
+            .fontSize(11).fontColor(this.restored || this.savedAt > 0 ? '#6FD3A8' : '#F5B971')
           Text('存档 ' + this.formatTime(this.savedAt))
             .fontSize(11).fontColor('#9FB3C8').margin({ top: 2 })
         }.alignItems(HorizontalAlign.End)
@@ -477,19 +496,34 @@ struct Index {
     .backgroundColor('#132238')
   }
 
+  /** 直接从 @State 读取环境量：@Builder 的值传递参数不会随状态刷新，必须走 this */
+  private envValue(key: MetricKey): number {
+    switch (key) {
+      case 'temperature': return this.env.temperature;
+      case 'illuminance': return this.env.illuminance;
+      case 'humidity': return this.env.humidity;
+      case 'hour': return this.env.hour;
+      default: return 0;
+    }
+  }
+
   @Builder
-  MetricSlider(label: string, key: MetricKey, value: number, min: number, max: number, step: number, unit: string) {
+  MetricSlider(label: string, key: MetricKey, min: number, max: number, step: number, unit: string) {
     Column() {
       Row() {
         Text(label).fontSize(13).fontColor('#C9D8E8').layoutWeight(1)
-        Text(value.toString() + unit).fontSize(13).fontColor('#4FC3E8')
+        Text(this.envValue(key).toString() + unit).fontSize(13).fontColor('#4FC3E8')
       }.width('100%')
-      Slider({ value: value, min: min, max: max, step: step, style: SliderStyle.OutSet })
+      Slider({ value: this.envValue(key), min: min, max: max, step: step, style: SliderStyle.OutSet })
         .width('100%')
         .trackColor('#2C435C')
         .selectedColor('#4FC3E8')
         .onChange((v: number, mode: SliderChangeMode) => {
-          this.setEnvValue(key, Math.round(v));
+          const nv = Math.round(v);
+          if (nv === this.envValue(key)) {
+            return; // 初始化回填与状态恢复时的回调，值未变化，不触发保存
+          }
+          this.setEnvValue(key, nv);
           if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
             this.persistAll();
           }
@@ -519,10 +553,10 @@ struct Index {
       Column({ space: 12 }) {
         Text('模拟环境（可直接调整）').fontSize(15).fontColor('#E6F1FB')
         Column({ space: 10 }) {
-          this.MetricSlider('温度', 'temperature', this.env.temperature, -10, 50, 1, '℃')
-          this.MetricSlider('光照', 'illuminance', this.env.illuminance, 0, 2000, 20, ' lux')
-          this.MetricSlider('湿度', 'humidity', this.env.humidity, 0, 100, 1, '%')
-          this.MetricSlider('时段', 'hour', this.env.hour, 0, 23, 1, ' 点')
+          this.MetricSlider('温度', 'temperature', -10, 50, 1, '℃')
+          this.MetricSlider('光照', 'illuminance', 0, 2000, 20, ' lux')
+          this.MetricSlider('湿度', 'humidity', 0, 100, 1, '%')
+          this.MetricSlider('时段', 'hour', 0, 23, 1, ' 点')
           Row() {
             Text('宿舍在室状态').fontSize(13).fontColor('#C9D8E8').layoutWeight(1)
             Text(this.env.occupancy ? '有人' : '无人').fontSize(13).fontColor('#4FC3E8')
@@ -559,7 +593,7 @@ struct Index {
         Text('设备实时状态').fontSize(15).fontColor('#E6F1FB')
         ForEach(this.devices, (d: DeviceState) => {
           this.DeviceCard(d)
-        }, (d: DeviceState) => d.id)
+        }, (d: DeviceState) => d.id + '|' + (d.power ? '1' : '0') + '|' + d.value.toString())
       }.padding(16)
     }.layoutWeight(1)
   }
@@ -612,7 +646,7 @@ struct Index {
         }
         ForEach(this.rules, (r: AutomationRule) => {
           this.RuleCard(r)
-        }, (r: AutomationRule) => r.id)
+        }, (r: AutomationRule) => r.id + '|' + (r.enabled ? '1' : '0') + '|' + r.priority.toString())
       }.padding(16)
     }.layoutWeight(1)
   }
@@ -710,7 +744,7 @@ struct Index {
         }
         ForEach(this.records, (r: ExecutionRecord) => {
           this.RecordRow(r)
-        }, (r: ExecutionRecord) => r.order.toString() + r.ruleId)
+        }, (r: ExecutionRecord) => r.order.toString() + r.ruleId + '|' + r.change.afterValue.toString())
 
         if (this.warnings.length > 0) {
           Column() {
@@ -759,10 +793,12 @@ struct Index {
               Row({ space: 6 }) {
                 Select(METRIC_SELECT)
                   .selected(this.indexIn(METRIC_TEXTS, metricLabel(c.metric)))
+                  .value(metricLabel(c.metric))
                   .font({ size: 12 }).backgroundColor('#16263B')
                   .onSelect((i: number) => { this.setConditionMetric(idx, i); })
                 Select(OP_SELECT)
                   .selected(this.indexIn(OP_TEXTS, opLabel(c.op)))
+                  .value(opLabel(c.op))
                   .font({ size: 12 }).backgroundColor('#16263B')
                   .onSelect((i: number) => { this.setConditionOp(idx, i); })
                 TextInput({ text: c.value.toString() })
@@ -784,6 +820,7 @@ struct Index {
             Row({ space: 6 }) {
               Select(DEVICE_SELECT)
                 .selected(this.indexIn(DEVICE_TEXTS, this.deviceName(a.deviceId)))
+                .value(this.deviceName(a.deviceId))
                 .font({ size: 12 }).backgroundColor('#16263B')
                 .onSelect((i: number) => { this.setActionDevice(idx, i); })
               Text('开关').fontSize(11).fontColor('#9FB3C8')
