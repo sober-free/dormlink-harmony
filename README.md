@@ -141,7 +141,7 @@ dormlink-harmony/
 - `tests/node/rule-engine.collab.test.mjs`：协作新增 3 条（正常 / 边界 / 异常各 1 条），覆盖环境量归一化、`hour` 取整与端点裁剪、非有限数降级、含中文引号存档的无损往返。
 - `entry/src/ohosTest/ets/test/RuleEngine.test.ets`：14 条 `@ohos/hypium` 用例，在 DevEco Studio 中右键 `ohosTest` → `Run 'Tests in entry'` 执行。
 - 测试直接 import `entry/src/main/ets/engine/RuleEngine.ts`，即应用实际运行的那份源码，**没有另写模拟实现**。
-- 三类覆盖：正常 8 / 边界 5 / 异常 7（Node 侧），详见需求说明书第 7 节。
+- 三类覆盖：正常 9 / 边界 6 / 异常 8（Node 侧，含协作新增 3 条），详见需求说明书第 7 节。
 
 ## 8. 运行截图与演示视频
 

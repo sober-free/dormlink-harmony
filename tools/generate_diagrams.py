@@ -119,7 +119,7 @@ def build_architecture():
 
     layer(800, 920, '测试层 · 直接 import 业务层同一份 .ts 源码',
           [(80, 510, '★ ohosTest (hypium)', ['DevEco Studio / 设备运行，14 条'], True),
-           (610, 510, '★ tests/node (node:test)', ['20 条实测通过，见 测试运行日志.md'], True)], 850, 58)
+           (610, 510, '★ tests/node (node:test)', ['23 条实测通过，见 测试运行日志.md'], True)], 850, 58)
 
     for a, b in [((600, 300), (600, 340)), ((600, 530), (600, 570)), ((600, 760), (600, 800))]:
         arrow(d, a, b, w=3)
