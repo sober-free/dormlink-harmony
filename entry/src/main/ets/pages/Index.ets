@@ -10,7 +10,7 @@ import {
 } from '../engine/DefaultData';
 import { DormStore, AppSnapshot, RestoreResult } from '../viewmodel/DormStore';
 import { StorageService } from '../repository/StorageService';
-import { ColorToken, FontToken, SpaceToken, RadiusToken, SizeToken } from '../common/DesignTokens';
+import { ColorToken, FontToken, SpaceToken, RadiusToken, SizeToken, ShadowToken } from '../common/DesignTokens';
 
 const METRIC_KEYS: MetricKey[] = ['temperature', 'illuminance', 'humidity', 'hour', 'occupancy'];
 const METRIC_TEXTS: string[] = ['温度', '光照', '湿度', '时段', '在室'];
@@ -665,7 +665,7 @@ struct Index {
       }.alignItems(HorizontalAlign.Start).layoutWeight(1)
       Column() {
         Text(this.onlineCount().toString())
-          .fontSize(20).fontWeight(FontWeight.Medium).fontColor(ColorToken.brand)
+          .fontSize(20).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
         Text('设备在线')
           .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
       }.alignItems(HorizontalAlign.End)
@@ -821,9 +821,10 @@ struct Index {
             Text('宿舍在室状态').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
             Text(this.env.occupancy ? '有人' : '无人').fontSize(FontToken.body).fontColor(ColorToken.accent)
             Toggle({ type: ToggleType.Switch, isOn: this.env.occupancy })
+              .selectedColor(ColorToken.brand)
               .onChange((on: boolean) => { this.setOccupancy(on); })
           }.width('100%')
-        }.width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
+        }.width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
 
         Row({ space: SpaceToken.md }) {
           Button('执行联动演练')
@@ -844,12 +845,12 @@ struct Index {
           Row() {
             Column() {
               Text(this.triggered.length.toString())
-                .fontSize(26).fontWeight(FontWeight.Medium).fontColor(ColorToken.accent)
+                .fontSize(26).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
               Text('触发规则').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
             }.layoutWeight(1).alignItems(HorizontalAlign.Center)
             Column() {
               Text(this.executedCount.toString())
-                .fontSize(26).fontWeight(FontWeight.Medium).fontColor(ColorToken.success)
+                .fontSize(26).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
               Text('执行动作').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
             }.layoutWeight(1).alignItems(HorizontalAlign.Center)
             Column() {
@@ -862,7 +863,7 @@ struct Index {
           Text('触发顺序：' + (this.triggered.length > 0 ? this.triggered.join(' → ') : '暂无'))
             .fontSize(FontToken.label).fontColor(ColorToken.accent).margin({ top: SpaceToken.sm })
         }
-        .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
+        .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
         .alignItems(HorizontalAlign.Start)
 
         Text('设备实时状态')
@@ -890,6 +891,7 @@ struct Index {
             .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 3 })
         }.alignItems(HorizontalAlign.Start).layoutWeight(1)
         Toggle({ type: ToggleType.Switch, isOn: r.enabled })
+          .selectedColor(ColorToken.brand)
           .onChange((on: boolean) => { this.toggleRule(r.id, on); })
       }.width('100%')
       Text('当 ' + this.conditionText(r))
@@ -899,15 +901,15 @@ struct Index {
       Text(r.description)
         .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 6 })
       Row({ space: SpaceToken.md }) {
-        Button('复制').fontSize(FontToken.label).backgroundColor(ColorToken.borderStrong)
+        Button('复制').fontSize(FontToken.label).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary)
           .onClick(() => { this.duplicateRule(r.id); })
-        Button('编辑').fontSize(FontToken.label).backgroundColor(ColorToken.borderStrong)
+        Button('编辑').fontSize(FontToken.label).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary)
           .onClick(() => { this.openEditor(r); })
-        Button('删除').fontSize(FontToken.label).backgroundColor(ColorToken.dangerBg)
+        Button('删除').fontSize(FontToken.label).backgroundColor(ColorToken.dangerBg).fontColor(ColorToken.danger)
           .onClick(() => { this.deleteRule(r.id); })
       }.margin({ top: 12 })
     }
-    .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
+    .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -944,7 +946,7 @@ struct Index {
       Button('载入并演练').fontSize(FontToken.body).backgroundColor(ColorToken.brand).margin({ top: 10 })
         .onClick(() => { this.applyScene(s); })
     }
-    .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
+    .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -983,7 +985,7 @@ struct Index {
             Text('可载入「S2 午后无人·冲突」场景观察优先级裁决过程。')
               .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 6 })
           }
-          .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
+          .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
           .alignItems(HorizontalAlign.Start)
         }
       }.padding(SpaceToken.lg).margin({ bottom: 80 })
@@ -1008,7 +1010,7 @@ struct Index {
         .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 4 })
       Text(r.note).fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 4 })
     }
-    .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.md).border({ width: SizeToken.borderWidth, color: ColorToken.border })
+    .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.md).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -1059,9 +1061,9 @@ struct Index {
           .fontSize(FontToken.heading).backgroundColor(ColorToken.brand).width('100%').margin({ top: 8 })
           .onClick(() => { this.generateReport(); })
         Row({ space: SpaceToken.md }) {
-          Button('清空执行记录').fontSize(FontToken.body).backgroundColor(ColorToken.borderStrong).layoutWeight(1)
+          Button('清空执行记录').fontSize(FontToken.body).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary).layoutWeight(1)
             .onClick(() => { this.clearRecords(); })
-          Button('恢复出厂方案').fontSize(FontToken.body).backgroundColor(ColorToken.dangerBg).layoutWeight(1)
+          Button('恢复出厂方案').fontSize(FontToken.body).backgroundColor(ColorToken.dangerBg).fontColor(ColorToken.danger).layoutWeight(1)
             .onClick(() => { this.resetAll(); })
         }.width('100%').margin({ top: 8 })
         Text('提示：结束应用进程后重新打开，规则、设备状态与最近 50 条执行记录会自动恢复。')
@@ -1105,7 +1107,7 @@ struct Index {
                 TextInput({ text: c.value.toString() })
                   .type(InputType.Number).width(70).backgroundColor(ColorToken.surface).fontColor(ColorToken.textPrimary)
                   .onChange((v: string) => { this.setConditionValue(idx, v); })
-                Button('×').fontSize(FontToken.body).backgroundColor(ColorToken.dangerBg)
+                Button('×').fontSize(FontToken.body).backgroundColor(ColorToken.dangerBg).fontColor(ColorToken.danger)
                   .onClick(() => { this.removeCondition(idx); })
               }.width('100%')
               Text(describeCondition(c)).fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 4 })
@@ -1113,7 +1115,7 @@ struct Index {
             .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.surfaceAlt).borderRadius(RadiusToken.md)
             .alignItems(HorizontalAlign.Start)
           }, (c: Condition, idx: number) => idx.toString() + c.metric)
-          Button('+ 添加条件（最多 3 条）').fontSize(FontToken.label).backgroundColor(ColorToken.borderStrong)
+          Button('+ 添加条件（最多 3 条）').fontSize(FontToken.label).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary)
             .onClick(() => { this.addCondition(); })
 
           Text('执行动作').fontSize(FontToken.body).fontColor(ColorToken.accent)
@@ -1126,21 +1128,22 @@ struct Index {
                 .onSelect((i: number) => { this.setActionDevice(idx, i); })
               Text('开关').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
               Toggle({ type: ToggleType.Switch, isOn: a.power })
+                .selectedColor(ColorToken.brand)
                 .onChange((on: boolean) => { this.setActionPower(idx, on); })
               TextInput({ text: a.value.toString() })
                 .type(InputType.Number).width(64).backgroundColor(ColorToken.surface).fontColor(ColorToken.textPrimary)
                 .onChange((v: string) => { this.setActionValue(idx, v); })
-              Button('×').fontSize(FontToken.body).backgroundColor(ColorToken.dangerBg)
+              Button('×').fontSize(FontToken.body).backgroundColor(ColorToken.dangerBg).fontColor(ColorToken.danger)
                 .onClick(() => { this.removeAction(idx); })
             }.width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.surfaceAlt).borderRadius(RadiusToken.md)
           }, (a: DeviceAction, idx: number) => idx.toString() + a.deviceId)
-          Button('+ 添加动作（最多 3 个）').fontSize(FontToken.label).backgroundColor(ColorToken.borderStrong)
+          Button('+ 添加动作（最多 3 个）').fontSize(FontToken.label).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary)
             .onClick(() => { this.addAction(); })
 
           Row({ space: SpaceToken.md }) {
             Button('保存并重新演练').fontSize(FontToken.heading).backgroundColor(ColorToken.brand).layoutWeight(1)
               .onClick(() => { this.saveDraft(); })
-            Button('取消').fontSize(FontToken.heading).backgroundColor(ColorToken.borderStrong).layoutWeight(1)
+            Button('取消').fontSize(FontToken.heading).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary).layoutWeight(1)
               .onClick(() => { this.showEditor = false; })
           }.width('100%').margin({ top: 6 })
         }.padding(SpaceToken.lg)
@@ -1424,7 +1427,7 @@ struct Index {
         Text('正常 ' + this.reportNormal + ' 条 · 边界 ' + this.reportBoundary + ' 条 · 异常 ' + this.reportException + ' 条')
           .fontSize(FontToken.label).fontColor(ColorToken.accent)
       }
-      .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border })
+      .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
       .alignItems(HorizontalAlign.Start)
 
       Scroll() {
@@ -1439,7 +1442,7 @@ struct Index {
                 Text(c.detail).fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 3 })
               }.alignItems(HorizontalAlign.Start).layoutWeight(1)
             }
-            .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.md).border({ width: SizeToken.borderWidth, color: ColorToken.border })
+            .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.md).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
             .alignItems(VerticalAlign.Top)
           }, (c: SelfTestCase) => c.id + (c.passed ? '1' : '0'))
         }.padding({ left: 16, right: 16, top: 12, bottom: 12 })
@@ -1447,7 +1450,7 @@ struct Index {
       .layoutWeight(1)
 
       Button('关闭')
-        .fontSize(FontToken.heading).backgroundColor(ColorToken.borderStrong).width('100%').margin({ bottom: 18 })
+        .fontSize(FontToken.heading).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary).width('100%').margin({ bottom: 18 })
         .onClick(() => { this.showReport = false; })
     }
     .width('100%').height('100%').backgroundColor(ColorToken.canvas)
