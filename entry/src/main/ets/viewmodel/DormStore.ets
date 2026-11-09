@@ -16,6 +16,10 @@ export interface AppSnapshot {
   conflicts: ConflictRecord[];
   warnings: string[];
   savedAt: number;
+  /** 最近一次演练的摘要（执行记录是累加时间线，摘要单独维护） */
+  lastTriggered: string[];
+  lastExecutedCount: number;
+  lastBlockedCount: number;
 }
 
 export interface RestoreResult {
@@ -39,7 +43,10 @@ export class DormStore {
       records: [],
       conflicts: [],
       warnings: [],
-      savedAt: 0
+      savedAt: 0,
+      lastTriggered: [],
+      lastExecutedCount: 0,
+      lastBlockedCount: 0
     };
   }
 
@@ -79,6 +86,26 @@ export class DormStore {
 
     const records: ExecutionRecord[] = state.records ? state.records.slice(0, 50) : [];
     const conflicts: ConflictRecord[] = state.conflicts ? state.conflicts.slice(0, 50) : [];
+
+    // 最近一次演练摘要：新存档直接读；旧存档（无该字段）由 records 回算
+    let lastTriggered: string[] = [];
+    let lastExecuted = 0;
+    let lastBlocked = 0;
+    if (state.lastTriggered) {
+      lastTriggered = state.lastTriggered;
+      lastExecuted = state.lastExecutedCount ? state.lastExecutedCount : 0;
+      lastBlocked = state.lastBlockedCount ? state.lastBlockedCount : 0;
+    } else {
+      for (const r of records) {
+        if (r.blocked) {
+          lastBlocked = lastBlocked + 1;
+        } else {
+          lastExecuted = lastExecuted + 1;
+        }
+        if (lastTriggered.indexOf(r.ruleId) < 0) lastTriggered.push(r.ruleId);
+      }
+    }
+
     const snapshot: AppSnapshot = {
       environment: normalizeEnvironment(state.environment),
       devices: devices,
@@ -86,7 +113,10 @@ export class DormStore {
       records: records,
       conflicts: conflicts,
       warnings: [],
-      savedAt: state.savedAt ? state.savedAt : 0
+      savedAt: state.savedAt ? state.savedAt : 0,
+      lastTriggered: lastTriggered,
+      lastExecutedCount: lastExecuted,
+      lastBlockedCount: lastBlocked
     };
     return {
       snapshot: snapshot,
@@ -104,7 +134,10 @@ export class DormStore {
       rules: snap.rules,
       records: snap.records.slice(0, 50),
       conflicts: snap.conflicts.slice(0, 50),
-      savedAt: savedAt
+      savedAt: savedAt,
+      lastTriggered: snap.lastTriggered,
+      lastExecutedCount: snap.lastExecutedCount,
+      lastBlockedCount: snap.lastBlockedCount
     };
     const text = serializeState(state);
     if (text.length === 0) return false;

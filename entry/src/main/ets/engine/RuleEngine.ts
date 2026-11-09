@@ -108,6 +108,13 @@ export interface PersistedState {
   records: ExecutionRecord[];
   conflicts: ConflictRecord[];
   savedAt: number;
+  /**
+   * 最近一次演练的摘要（可选：v1 早期存档没有这三个字段，读取时由 records 回算）。
+   * 执行记录是累加保留的时间线，摘要只描述「最近一次」，所以必须单独存。
+   */
+  lastTriggered?: string[];
+  lastExecutedCount?: number;
+  lastBlockedCount?: number;
 }
 
 const DEFAULT_ENV: Environment = {

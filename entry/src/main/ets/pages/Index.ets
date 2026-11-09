@@ -127,16 +127,10 @@ struct Index {
     this.conflicts = s.conflicts;
     this.warnings = s.warnings;
     this.savedAt = s.savedAt;
-    // 由恢复的执行记录回算摘要，避免界面显示「0 条」与日志内容不一致
-    let executed = 0;
-    const trig: string[] = [];
-    for (const r of s.records) {
-      if (!r.blocked) executed++;
-      if (trig.indexOf(r.ruleId) < 0) trig.push(r.ruleId);
-    }
-    this.executedCount = executed;
-    this.blockedCount = s.conflicts.length;
-    this.triggered = trig;
+    // 摘要由快照直接恢复（执行记录是累加时间线，不能再从 records 回算「本次」）
+    this.triggered = s.lastTriggered;
+    this.executedCount = s.lastExecutedCount;
+    this.blockedCount = s.lastBlockedCount;
   }
 
   private async persistAll(): Promise<void> {
@@ -148,7 +142,10 @@ struct Index {
       records: this.records,
       conflicts: this.conflicts,
       warnings: this.warnings,
-      savedAt: now
+      savedAt: now,
+      lastTriggered: this.triggered,
+      lastExecutedCount: this.executedCount,
+      lastBlockedCount: this.blockedCount
     };
     const ok = await DormStore.persist(this.getCtx(), snap, now);
     if (ok) {
@@ -219,7 +216,7 @@ struct Index {
   private runOnce(): void {
     const result = evaluate(this.env, this.devices, this.rules);
     this.devices = result.devices;
-    this.records = result.records;
+    this.records = this.appendRecords(this.records, result.records);
     this.conflicts = result.conflicts;
     this.warnings = result.warnings;
     this.triggered = result.triggeredRuleIds;
@@ -227,6 +224,28 @@ struct Index {
     this.blockedCount = result.blockedCount;
     this.showToast('演练完成：执行 ' + result.executedCount + ' 个动作，拦截 ' + result.blockedCount + ' 个冲突动作');
     this.persistAll();
+  }
+
+  /**
+   * 把本次演练记录追加到历史时间线，保留最近 50 条并全局重排序号。
+   *
+   * 修复：此前是 `this.records = result.records`，每次演练都把历史记录冲掉，
+   * 日志页永远只剩最后一次，与「Preferences 保留最近 50 条执行记录」的设计不符。
+   */
+  private appendRecords(history: ExecutionRecord[], fresh: ExecutionRecord[]): ExecutionRecord[] {
+    const merged: ExecutionRecord[] = [];
+    for (const r of history) merged.push(r);
+    for (const r of fresh) merged.push(r);
+    const start = merged.length > 50 ? merged.length - 50 : 0;
+    const kept: ExecutionRecord[] = [];
+    for (let i = start; i < merged.length; i++) {
+      const r = merged[i];
+      kept.push({
+        order: kept.length + 1, ruleId: r.ruleId, ruleName: r.ruleName, priority: r.priority,
+        conditions: r.conditions, change: r.change, blocked: r.blocked, note: r.note
+      });
+    }
+    return kept;
   }
 
   private applyScene(scene: ScenePreset): void {
