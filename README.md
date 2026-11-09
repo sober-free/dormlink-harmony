@@ -1,0 +1,128 @@
+# DormLink 智宿联动实验室
+
+> 《鸿蒙高级应用开发工程师认证》期末大作业 · 主题三「联动实验室：智能宿舍自动化规则编排 App」
+>
+> **作者**：徐豪（20230313120，23物联1）　**GitHub 账号**：`sober-free`
+> **仓库**：https://github.com/sober-free/dormlink-harmony
+
+![系统架构图](docs/系统架构图.png)
+
+> 上图为系统架构示意图（由本仓库脚本绘制，非运行截图）。应用运行截图与录屏见第 7 节说明。
+
+---
+
+## 1. 作品简介
+
+宿舍里的灯、空调、窗帘、风扇、加湿器通常各按各的开关，缺少"满足条件就自动联动"的统一编排。DormLink 把这件事做成一个**完全本地、可模拟、可持久化**的 HarmonyOS 应用：用户用 Mock 环境数据（温度、光照、湿度、时段、在室状态）驱动规则引擎，自定义"当…则…"规则，观察设备如何联动、日志如何记录、冲突如何裁决，并在修改规则后立刻复验。
+
+核心体验链路：**新建/修改规则 → 调整 Mock 环境 → 观察设备联动及日志 → 载入冲突场景并调整规则 → 结束进程重启恢复方案**。
+
+不依赖真实硬件、网络或云平台；所有业务判断由本地纯逻辑规则引擎完成。
+
+## 2. 功能清单
+
+| 需求 | 题目要求 | 本作品实现 |
+| --- | --- | --- |
+| 设备类型 | ≥4 类 | **5 类**：主灯、空调、窗帘、风扇、加湿器 |
+| 模拟环境量 | ≥3 项 | **5 项**：温度（-10~50℃）、光照（0~2000lux）、湿度（0~100%）、时段（0~23点）、在室状态 |
+| 规则 | ≥4 条，含 1 条双条件规则 | **6 条**默认规则（R001~R006），其中 **R001 / R004 / R006 为双条件**；支持新增、编辑、删除、启停、优先级调整 |
+| 规则引擎 | 按实际输入计算，记录触发条件、设备变化、执行顺序 | `evaluate()` 输出设备终态 + `ExecutionRecord`（order / 条件快照 / before→after / 拦截标记）+ `warnings` |
+| 冲突处理 | 明确执行顺序或优先级 | 按 `(priority 升序, id 升序)` 稳定排序；同一设备通道仅最高优先级规则写入，其余动作拦截并生成 `ConflictRecord` |
+| 场景演练 | ≥2 组 | **4 组**：S1 夏夜归寝、S2 午后无人·冲突、S3 干燥清晨、S4 深夜无人 |
+| 持久化 | 设置、规则、执行记录可恢复 | Preferences 单 JSON 快照（`dormlink_state`），保留最近 50 条记录；进程重启自动恢复 |
+| 测试 | ≥6 条，覆盖正常/边界/异常 | Node 侧 **19 条全部通过**，DevEco `ohosTest` 侧 14 条 |
+
+### 四个页签
+
+- **联动台**：5 项环境量调节、一键演练、本次结果摘要、5 张设备实时状态卡。
+- **规则**：6 条规则卡片（条件/动作/优先级/启停），新增与编辑弹层（最多 3 个条件 + 3 个动作），保存前做合法性校验。
+- **演练**：4 组预设场景一键载入并执行；出现冲突时显示胜出/被拦截规则，并提供「一键修复：为高温制冷补充『有人在室』条件」验证冲突消除。
+- **日志**：执行时间线（序号、优先级、条件快照、设备变化）、冲突记录、引擎告警、存档时间、清空记录与恢复出厂方案。
+
+## 3. 开发环境
+
+| 项目 | 版本/说明 |
+| --- | --- |
+| IDE | DevEco Studio（HarmonyOS 5.0 / API 12 对应版本） |
+| 语言 / 框架 | ArkTS、ArkUI（声明式 UI）、Stage 模型 |
+| SDK | `compatibleSdkVersion: 5.0.0(12)`，`runtimeOS: HarmonyOS` |
+| 持久化 | `@kit.ArkData` → `preferences` |
+| 测试框架 | `@ohos/hypium`（ohosTest）+ `node:test`（纯逻辑） |
+| 纯逻辑测试环境 | Node.js ≥ 22.6（用原生 TypeScript type-stripping 直接执行 `.ts` 源码） |
+| 运行载体 | HarmonyOS 模拟器或真机 |
+
+> 若本机 DevEco 的 SDK 版本不同，修改根 `build-profile.json5` 中的 `compatibleSdkVersion` / `targetSdkVersion` 后 Sync 即可。
+
+## 4. 目录结构
+
+```
+dormlink-harmony/
+├── AppScope/                       应用级配置与图标
+├── entry/src/main/
+│   ├── ets/entryability/           EntryAbility.ets（窗口与页面加载）
+│   ├── ets/pages/Index.ets         ★ 四个页签 UI、@State 状态管理、规则编辑器
+│   ├── ets/engine/RuleEngine.ts    ★ 规则引擎（纯逻辑，不依赖 HarmonyOS API）
+│   ├── ets/engine/DefaultData.ts   ★ 默认设备 / 6 条规则 / 4 组场景
+│   ├── ets/viewmodel/DormStore.ets ★ 内存态 ↔ 持久化快照、恢复降级
+│   ├── ets/repository/StorageService.ets ★ Preferences 读写与异常捕获
+│   └── resources/                  页面路由、字符串、颜色、图标
+├── entry/src/ohosTest/             ★ DevEco 侧 hypium 单元测试（14 条）
+├── tests/node/                     ★ Node 侧测试（19 条，直接加载上面的业务源码）
+├── docs/
+│   ├── 软件需求说明书.md           ★ 需求、数据模型、接口、分工、测试、验收
+│   ├── 测试运行日志.md             ★ 真实命令输出（19/19 通过）
+│   ├── 运行与录屏指南.md           导入/编译/截图/录屏分镜
+│   ├── 系统架构图.png              架构示意图
+│   └── 业务流程图.png              规则引擎执行流程图
+├── screenshots/                    运行截图与录屏存放目录（由本人实机补录）
+└── build-profile.json5 / hvigorfile.ts / oh-package.json5
+```
+
+★ 为本人（徐豪 / `sober-free`）独立完成的模块。
+
+## 5. 运行方法
+
+1. 打开 DevEco Studio → `File > Open`，选择本仓库根目录 `dormlink-harmony`。
+2. 等待 `Sync` / `ohpm install` 完成；如提示签名，使用 `File > Project Structure > Signing Configs` 开启自动签名。
+3. 启动 HarmonyOS 模拟器或连接真机，点击 `Run 'entry'`（▶）。
+4. 首次启动加载 6 条默认规则；推荐验收顺序：
+   - 联动台拖动温度到 30℃ → 点「执行联动演练」→ 空调变为 ON。
+   - 规则页点「+ 新增规则」，配置一个双条件规则并保存 → 立即重新演练。
+   - 演练页载入 **S2 午后无人·冲突** → 出现冲突提示（R002 胜出 / R005 被拦截）→ 点「一键修复」→ 冲突数归零。
+   - 日志页查看执行序号、条件快照与设备 before→after。
+   - **结束应用进程后重新打开** → 日志页显示"已从 Preferences 恢复…"，规则、设备状态与执行记录均保留。
+5. 纯逻辑测试（无需 DevEco）：
+   ```bash
+   node --test tests/node/rule-engine.test.mjs
+   ```
+
+## 6. 自动化测试与证据
+
+- `tests/node/rule-engine.test.mjs`：19 条，`node --test` 实测 **19 通过 / 0 失败**，完整 TAP 输出见 [`docs/测试运行日志.md`](docs/测试运行日志.md)。
+- `entry/src/ohosTest/ets/test/RuleEngine.test.ets`：14 条 `@ohos/hypium` 用例，在 DevEco Studio 中右键 `ohosTest` → `Run 'Tests in entry'` 执行。
+- 测试直接 import `entry/src/main/ets/engine/RuleEngine.ts`，即应用实际运行的那份源码，**没有另写模拟实现**。
+- 三类覆盖：正常 7 / 边界 5 / 异常 7（Node 侧），详见需求说明书第 7 节。
+
+## 7. 截图与运行录屏
+
+**诚实说明**：仓库中的 `系统架构图.png`、`业务流程图.png` 是设计示意图，不是应用运行截图。真实运行截图与录屏需要由本人在 DevEco Studio 模拟器/真机上补录，否则「运行效果」「项目演示」相关评分项缺少证据。
+
+- 待补录文件放入 `screenshots/`，命名与分镜脚本见 [`docs/运行与录屏指南.md`](docs/运行与录屏指南.md) 与 [`screenshots/README.md`](screenshots/README.md)。
+- 需补录的 8 张截图：联动台首页、规则列表、规则编辑弹层、S1 演练结果、S2 冲突提示、一键修复后结果、执行日志、重启后恢复提示。
+- 需补录 1 段完整录屏：按第 5 节第 4 步的验收顺序连续操作，包含"结束进程 → 重启 → 数据恢复"。
+
+## 8. 持久化与异常处理
+
+- 存储：`preferences.getPreferences(context, 'dormlink_state')`，键 `snapshot`（完整 JSON）与 `saved_at`；每次变更 `put → flush` 立即落盘。
+- 恢复：`Index.aboutToAppear()` 异步调用 `DormStore.restore()`；存储不可用、无存档、JSON 损坏或字段缺失时安全回退默认方案，并在界面显示原因。
+- 引擎侧：越界数值裁剪、NaN/非法规则校验、未知设备忽略、null 输入降级，全部写入 `warnings` 展示在日志页。
+
+## 9. 交付信息
+
+| 项目 | 内容 |
+| --- | --- |
+| GitHub 仓库 | https://github.com/sober-free/dormlink-harmony |
+| 本人 GitHub 账号 | `sober-free` |
+| 需求说明书 | `docs/软件需求说明书.md` |
+| 测试证据 | `docs/测试运行日志.md` |
+| 个人报告 | `鸿蒙高级应用开发工程师认证-20230313120-徐豪-期末大作业报告.docx`（仓库外提交） |
