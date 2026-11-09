@@ -659,8 +659,7 @@ struct Index {
           Text(' ▾')
             .fontSize(FontToken.label).fontColor(ColorToken.textTertiary)
         }
-        Text(this.env.temperature.toString() + '℃ · 湿度 ' + this.env.humidity.toString() +
-             '% · ' + this.env.illuminance.toString() + ' lux')
+        Text('本地存档 ' + this.formatTime(this.savedAt) + ' · 无云同步')
           .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 3 })
       }.alignItems(HorizontalAlign.Start).layoutWeight(1)
       Column() {
@@ -795,12 +794,61 @@ struct Index {
     })
   }
 
+  /** 分组小标题：米家式 11px 灰字，贴在卡片上方（而非卡内加粗标题） */
+  @Builder
+  SectionTitle(title: string) {
+    Text(title)
+      .fontSize(FontToken.caption)
+      .fontColor(ColorToken.textSecondary)
+      .width('100%')
+      .padding({ left: SpaceToken.xs })
+      .margin({ top: SpaceToken.sm })
+  }
+
+  /** 环境摘要卡：三个大数字横排，米家「室内环境」的写法 */
+  @Builder
+  EnvSummaryCard() {
+    Row() {
+      Column() {
+        Row() {
+          Text(this.env.temperature.toString())
+            .fontSize(24).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+          Text('℃').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ left: 2, bottom: 3 })
+        }.alignItems(VerticalAlign.Bottom)
+        Text('温度').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
+      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+
+      Column() {
+        Row() {
+          Text(this.env.humidity.toString())
+            .fontSize(24).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+          Text('%').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ left: 2, bottom: 3 })
+        }.alignItems(VerticalAlign.Bottom)
+        Text('湿度').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
+      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+
+      Column() {
+        Row() {
+          Text(this.env.illuminance.toString())
+            .fontSize(24).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+          Text('lux').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ left: 2, bottom: 3 })
+        }.alignItems(VerticalAlign.Bottom)
+        Text('光照').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
+      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+    }
+    .width('100%').padding(SpaceToken.lg)
+    .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+    .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+  }
+
   @Builder
   DashboardPanel() {
     Scroll() {
       Column({ space: SpaceToken.md }) {
-        Text('快捷场景')
-          .fontSize(FontToken.heading).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary).width('100%')
+        this.SectionTitle('宿舍环境')
+        this.EnvSummaryCard()
+
+        this.SectionTitle('快捷场景')
         Scroll() {
           Row({ space: SpaceToken.md }) {
             ForEach(SCENE_PRESETS, (s: ScenePreset) => {
@@ -811,7 +859,17 @@ struct Index {
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off)
         .width('100%')
-        Text('模拟环境（可直接调整）').fontSize(FontToken.heading).fontColor(ColorToken.textPrimary).width('100%')
+
+        this.SectionTitle('设备')
+        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
+          ForEach(this.devices, (d: DeviceState) => {
+            Column() {
+              this.DeviceCard(d)
+            }.width('48%').margin({ bottom: SpaceToken.md })
+          }, (d: DeviceState) => d.id + '|' + (d.power ? '1' : '0') + '|' + d.value.toString())
+        }.width('100%')
+
+        this.SectionTitle('模拟环境')
         Column({ space: SpaceToken.md }) {
           this.MetricSlider('温度', 'temperature', -10, 50, 1, '℃')
           this.MetricSlider('光照', 'illuminance', 0, 2000, 20, ' lux')
@@ -824,24 +882,23 @@ struct Index {
               .selectedColor(ColorToken.brand)
               .onChange((on: boolean) => { this.setOccupancy(on); })
           }.width('100%')
+          Row({ space: SpaceToken.md }) {
+            Button('执行联动演练')
+              .fontSize(FontToken.heading).layoutWeight(1).backgroundColor(ColorToken.brand)
+              .onClick(() => { this.runOnce(); })
+            Button('重置环境')
+              .fontSize(FontToken.body).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary)
+              .onClick(() => {
+                this.env = normalizeEnvironment(DEFAULT_ENVIRONMENT);
+                this.activeScene = '';
+                this.showToast('环境已重置');
+                this.persistAll();
+              })
+          }.width('100%').margin({ top: SpaceToken.md })
         }.width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
 
-        Row({ space: SpaceToken.md }) {
-          Button('执行联动演练')
-            .fontSize(FontToken.heading).layoutWeight(1).backgroundColor(ColorToken.brand)
-            .onClick(() => { this.runOnce(); })
-          Button('重置环境')
-            .fontSize(FontToken.body).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary)
-            .onClick(() => {
-              this.env = normalizeEnvironment(DEFAULT_ENVIRONMENT);
-              this.activeScene = '';
-              this.showToast('环境已重置');
-              this.persistAll();
-            })
-        }.width('100%')
-
+        this.SectionTitle('本次演练')
         Column() {
-          Text('本次演练结果').fontSize(FontToken.heading).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
           Row() {
             Column() {
               Text(this.triggered.length.toString())
@@ -865,51 +922,44 @@ struct Index {
         }
         .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
         .alignItems(HorizontalAlign.Start)
-
-        Text('设备实时状态')
-          .fontSize(FontToken.heading).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary).width('100%')
-        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
-          ForEach(this.devices, (d: DeviceState) => {
-            Column() {
-              this.DeviceCard(d)
-            }.width('48%').margin({ bottom: SpaceToken.md })
-          }, (d: DeviceState) => d.id + '|' + (d.power ? '1' : '0') + '|' + d.value.toString())
-        }.width('100%')
       }.padding(SpaceToken.lg).margin({ bottom: 80 })
     }.layoutWeight(1)
   }
 
+  /**
+   * 规则行（米家列表行式）：左侧名称 + 条件/动作摘要 + 元信息，右侧开关，底部文字操作。
+   * 不再一卡一条，外层由 RulePanel 统一包一张卡并用分隔线分组。
+   */
   @Builder
-  RuleCard(r: AutomationRule) {
+  RuleRow(r: AutomationRule) {
     Column() {
       Row() {
         Column() {
-          Text(r.id + '  ' + r.name)
-            .fontSize(FontToken.heading).fontColor(r.enabled ? ColorToken.textPrimary : ColorToken.textTertiary)
-          Text('优先级 ' + r.priority + ' · ' + (r.enabled ? '已启用' : '已停用') + ' · ' +
-               r.conditions.length + ' 个条件')
-            .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 3 })
+          Text(r.name)
+            .fontSize(FontToken.heading).fontWeight(FontWeight.Medium)
+            .fontColor(r.enabled ? ColorToken.textPrimary : ColorToken.textTertiary)
+          Text('当 ' + this.conditionText(r) + ' → ' + this.actionText(r))
+            .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
+            .margin({ top: 4 })
+            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(r.id + ' · 优先级 ' + r.priority + ' · ' + r.conditions.length + ' 个条件')
+            .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 3 })
         }.alignItems(HorizontalAlign.Start).layoutWeight(1)
         Toggle({ type: ToggleType.Switch, isOn: r.enabled })
           .selectedColor(ColorToken.brand)
           .onChange((on: boolean) => { this.toggleRule(r.id, on); })
-      }.width('100%')
-      Text('当 ' + this.conditionText(r))
-        .fontSize(FontToken.label).fontColor(ColorToken.accent).margin({ top: 10 })
-      Text('则 ' + this.actionText(r))
-        .fontSize(FontToken.label).fontColor(ColorToken.textSecondary).margin({ top: 4 })
-      Text(r.description)
-        .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 6 })
-      Row({ space: SpaceToken.md }) {
-        Button('复制').fontSize(FontToken.label).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary)
+          .margin({ left: SpaceToken.md })
+      }.width('100%').alignItems(VerticalAlign.Top)
+      Row({ space: SpaceToken.lg }) {
+        Text('复制').fontSize(FontToken.label).fontColor(ColorToken.textTertiary)
           .onClick(() => { this.duplicateRule(r.id); })
-        Button('编辑').fontSize(FontToken.label).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary)
+        Text('编辑').fontSize(FontToken.label).fontColor(ColorToken.textTertiary)
           .onClick(() => { this.openEditor(r); })
-        Button('删除').fontSize(FontToken.label).backgroundColor(ColorToken.dangerBg).fontColor(ColorToken.danger)
+        Text('删除').fontSize(FontToken.label).fontColor(ColorToken.danger)
           .onClick(() => { this.deleteRule(r.id); })
-      }.margin({ top: 12 })
+      }.width('100%').margin({ top: SpaceToken.sm })
     }
-    .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+    .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -918,50 +968,86 @@ struct Index {
     Scroll() {
       Column({ space: SpaceToken.md }) {
         Row() {
-          Text('联动规则（' + this.rules.length + ' 条）')
-            .fontSize(FontToken.heading).fontColor(ColorToken.textPrimary).layoutWeight(1)
-          Button('+ 新增规则').fontSize(FontToken.body).backgroundColor(ColorToken.brand)
+          Text('联动规则').fontSize(FontToken.heading).fontWeight(FontWeight.Medium)
+            .fontColor(ColorToken.textPrimary).layoutWeight(1)
+          Text('＋ 新增').fontSize(FontToken.body).fontColor(ColorToken.brand)
             .onClick(() => { this.openNewEditor(); })
-        }.width('100%')
-        Text('规则按「优先级数值」从小到大顺序执行；同一设备同时被多条规则控制时，高优先级规则胜出，低优先级动作被拦截并记入冲突日志。')
+        }.width('100%').margin({ top: SpaceToken.sm })
+        Text('共 ' + this.rules.length + ' 条 · 按优先级从小到大执行，冲突时高优先级胜出')
           .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
         if (this.rules.length === 0) {
-          Text('暂无规则，请点击右上角新增').fontSize(FontToken.body).fontColor(ColorToken.textTertiary)
+          Column() {
+            Text('暂无规则').fontSize(FontToken.body).fontColor(ColorToken.textTertiary)
+            Text('点击右上角「＋ 新增」创建第一条联动规则').fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 4 })
+          }
+          .width('100%').padding(SpaceToken.xl)
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+        } else {
+          Column() {
+            ForEach(this.rules, (r: AutomationRule, idx: number) => {
+              if (idx > 0) {
+                Divider().color(ColorToken.border).strokeWidth(1)
+              }
+              this.RuleRow(r)
+            }, (r: AutomationRule) => r.id + '|' + (r.enabled ? '1' : '0') + '|' + r.priority.toString())
+          }
+          .width('100%')
+          .padding({ left: SpaceToken.lg, right: SpaceToken.lg })
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
         }
-        ForEach(this.rules, (r: AutomationRule) => {
-          this.RuleCard(r)
-        }, (r: AutomationRule) => r.id + '|' + (r.enabled ? '1' : '0') + '|' + r.priority.toString())
       }.padding(SpaceToken.lg).margin({ bottom: 80 })
     }.layoutWeight(1)
   }
 
+  /** 演练场景行：整行可点，右侧「载入」文字按钮，风格同规则/日志列表 */
   @Builder
-  SceneCard(s: ScenePreset) {
-    Column() {
-      Text(s.id + ' · ' + s.name).fontSize(FontToken.heading).fontColor(ColorToken.textPrimary)
-      Text('温度 ' + s.env.temperature + '℃   光照 ' + s.env.illuminance + 'lux   湿度 ' +
-           s.env.humidity + '%   ' + s.env.hour + '点   ' + (s.env.occupancy ? '有人' : '无人'))
-        .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 6 })
-      Text(s.note).fontSize(FontToken.caption).fontColor(ColorToken.warning).margin({ top: 6 })
-      Button('载入并演练').fontSize(FontToken.body).backgroundColor(ColorToken.brand).margin({ top: 10 })
+  SceneRow(s: ScenePreset) {
+    Row() {
+      Column() {
+        Text(s.name)
+          .fontSize(FontToken.heading).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+        Text(s.env.temperature + '℃ · ' + s.env.illuminance + 'lux · ' + s.env.humidity + '% · ' +
+             s.env.hour + ' 点 · ' + (s.env.occupancy ? '有人' : '无人'))
+          .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 4 })
+        Text(s.note)
+          .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 3 })
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+      Text('载入')
+        .fontSize(FontToken.body).fontColor(ColorToken.brand)
+        .margin({ left: SpaceToken.md })
         .onClick(() => { this.applyScene(s); })
     }
-    .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
-    .alignItems(HorizontalAlign.Start)
+    .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+    .alignItems(VerticalAlign.Top)
   }
 
   @Builder
   ScenePanel() {
     Scroll() {
       Column({ space: SpaceToken.md }) {
-        Text('模拟演练场景（4 组，点击即载入环境并执行）')
-          .fontSize(FontToken.heading).fontColor(ColorToken.textPrimary)
-        ForEach(SCENE_PRESETS, (s: ScenePreset) => {
-          this.SceneCard(s)
-        }, (s: ScenePreset) => s.id)
-        if (this.activeScene.length > 0) {
-          Text('当前场景：' + this.activeScene).fontSize(FontToken.body).fontColor(ColorToken.accent)
+        Row() {
+          Text('演练场景').fontSize(FontToken.heading).fontWeight(FontWeight.Medium)
+            .fontColor(ColorToken.textPrimary).layoutWeight(1)
+          Text(this.activeScene.length > 0 ? '当前 ' + this.activeScene : '未载入')
+            .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
+        }.width('100%').margin({ top: SpaceToken.sm })
+        Text('点击「载入」即套用该组环境并执行一次联动演练')
+          .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
+
+        Column() {
+          ForEach(SCENE_PRESETS, (s: ScenePreset, idx: number) => {
+            if (idx > 0) {
+              Divider().color(ColorToken.border).strokeWidth(1)
+            }
+            this.SceneRow(s)
+          }, (s: ScenePreset) => s.id)
         }
+        .width('100%').padding({ left: SpaceToken.lg, right: SpaceToken.lg })
+        .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+        .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+
         if (this.conflicts.length > 0) {
           Column() {
             Text('检测到 ' + this.conflicts.length + ' 处控制冲突')
@@ -971,46 +1057,60 @@ struct Index {
                    c.loserRuleId + ' 被拦截')
                 .fontSize(FontToken.label).fontColor(ColorToken.warning).margin({ top: 6 })
             }, (c: ConflictRecord, idx: number) => idx.toString() + c.loserRuleId)
-            Button('一键修复：为高温制冷补充「有人在室」条件')
-              .fontSize(FontToken.body).backgroundColor(ColorToken.warningBg).margin({ top: 12 })
-              .onClick(() => { this.fixConflict(); })
             Text('修复原理：R002 原本只看温度，高温且无人时会与 R005「无人节能」争夺空调。补充在室条件后，无人场景 R002 不再命中，冲突消失。')
               .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 8 })
           }
           .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.warningBg).borderRadius(RadiusToken.lg)
           .alignItems(HorizontalAlign.Start)
+
+          this.SectionTitle('工具')
+          Column() {
+            Row() {
+              Text('一键修复：为高温制冷补充「有人在室」条件')
+                .fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+              Text('›').fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
+            }
+            .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+            .onClick(() => { this.fixConflict(); })
+          }
+          .width('100%').padding({ left: SpaceToken.lg, right: SpaceToken.lg })
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
         } else {
           Column() {
-            Text('当前无控制冲突').fontSize(FontToken.heading).fontColor(ColorToken.success)
-            Text('可载入「S2 午后无人·冲突」场景观察优先级裁决过程。')
-              .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 6 })
+            Text('当前无控制冲突').fontSize(FontToken.body).fontColor(ColorToken.success)
+            Text('载入「午后无人·冲突」场景可观察优先级裁决过程。')
+              .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 4 })
           }
-          .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+          .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
           .alignItems(HorizontalAlign.Start)
         }
       }.padding(SpaceToken.lg).margin({ bottom: 80 })
     }.layoutWeight(1)
   }
 
+  /** 执行记录行（米家列表行式）：外层由 LogPanel 统一包卡 + 分隔线 */
   @Builder
   RecordRow(r: ExecutionRecord) {
     Column() {
       Row() {
-        Text('#' + r.order).fontSize(FontToken.label).fontColor(ColorToken.accent)
-        Text(r.ruleId + ' ' + r.ruleName)
-          .fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1).margin({ left: 8 })
+        Text('#' + r.order).fontSize(FontToken.label).fontColor(ColorToken.textTertiary)
+        Text(r.ruleName)
+          .fontSize(FontToken.body).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+          .layoutWeight(1).margin({ left: SpaceToken.sm })
         Text(r.blocked ? '已拦截' : '已执行')
           .fontSize(FontToken.caption).fontColor(r.blocked ? ColorToken.warning : ColorToken.success)
       }.width('100%')
-      Text('优先级 ' + r.priority + ' · 条件 ' + this.conditionList(r.conditions))
-        .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 6 })
+      Text(r.ruleId + ' · 优先级 ' + r.priority + ' · ' + this.conditionList(r.conditions))
+        .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 5 })
       Text(r.change.deviceName + '：' + (r.change.beforePower ? '开 ' : '关 ') +
            r.change.beforeValue + ' → ' + (r.change.afterPower ? '开 ' : '关 ') +
-           r.change.afterValue)
-        .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 4 })
-      Text(r.note).fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 4 })
+           r.change.afterValue + (r.blocked ? '（保持原状）' : ''))
+        .fontSize(FontToken.caption).fontColor(r.blocked ? ColorToken.warning : ColorToken.textSecondary)
+        .margin({ top: 3 })
     }
-    .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.md).border({ width: SizeToken.borderWidth, color: ColorToken.border }).shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+    .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
     .alignItems(HorizontalAlign.Start)
   }
 
@@ -1030,44 +1130,90 @@ struct Index {
   LogPanel() {
     Scroll() {
       Column({ space: SpaceToken.md }) {
-        Text('执行记录与存档').fontSize(FontToken.heading).fontColor(ColorToken.textPrimary)
-        Text('持久化：Preferences / dormlink_state · 存档时间 ' + this.formatTime(this.savedAt))
-          .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
-        Text(this.restoreMessage).fontSize(FontToken.caption).fontColor(this.restored ? ColorToken.success : ColorToken.warning)
+        // 存档状态：米家式「一行标签 + 右侧值」，说明文字降为副标题
+        Column() {
+          Row() {
+            Text('本地存档').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+            Text(this.savedAt > 0 ? this.formatTime(this.savedAt) : '未保存')
+              .fontSize(FontToken.body).fontColor(ColorToken.textSecondary)
+          }.width('100%')
+          Text(this.restoreMessage)
+            .fontSize(FontToken.caption)
+            .fontColor(this.restored ? ColorToken.success : ColorToken.warning)
+            .margin({ top: 4 })
+          Text('Preferences / dormlink_state · 结束进程后重开自动恢复')
+            .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 2 })
+        }
+        .width('100%').padding(SpaceToken.lg)
+        .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+        .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+        .alignItems(HorizontalAlign.Start)
+
+        this.SectionTitle('执行记录')
         Row({ space: SpaceToken.sm }) {
           this.LogFilterPill('全部 ' + this.records.length, false)
           this.LogFilterPill('只看拦截 ' + this.blockedRecords(), true)
         }.width('100%')
+
         if (this.visibleRecords().length === 0) {
           Text(this.logOnlyBlocked ? '当前没有拦截记录' : '尚未执行演练，请到「联动台」或「演练」页运行一次')
             .fontSize(FontToken.body).fontColor(ColorToken.textTertiary)
+            .width('100%').padding(SpaceToken.xl)
+            .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+        } else {
+          Column() {
+            ForEach(this.visibleRecords(), (r: ExecutionRecord, idx: number) => {
+              if (idx > 0) {
+                Divider().color(ColorToken.border).strokeWidth(1)
+              }
+              this.RecordRow(r)
+            }, (r: ExecutionRecord) => r.order.toString() + r.ruleId + '|' + r.change.afterValue.toString())
+          }
+          .width('100%')
+          .padding({ left: SpaceToken.lg, right: SpaceToken.lg })
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
         }
-        ForEach(this.visibleRecords(), (r: ExecutionRecord) => {
-          this.RecordRow(r)
-        }, (r: ExecutionRecord) => r.order.toString() + r.ruleId + '|' + r.change.afterValue.toString())
 
         if (this.warnings.length > 0) {
           Column() {
-            Text('引擎告警 / 异常降级记录（' + this.warnings.length + ' 条）')
+            Text('引擎告警（' + this.warnings.length + ' 条）')
               .fontSize(FontToken.body).fontColor(ColorToken.warning)
             ForEach(this.warnings, (w: string, idx: number) => {
               Text('· ' + w).fontSize(FontToken.caption).fontColor(ColorToken.warning).margin({ top: 4 })
             }, (w: string, idx: number) => idx.toString() + w)
           }
-          .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.warningBg).borderRadius(RadiusToken.md)
+          .width('100%').padding(SpaceToken.md).backgroundColor(ColorToken.warningBg).borderRadius(RadiusToken.lg)
           .alignItems(HorizontalAlign.Start)
         }
-        Button('生成测试报告')
-          .fontSize(FontToken.heading).backgroundColor(ColorToken.brand).width('100%').margin({ top: 8 })
+
+        this.SectionTitle('工具')
+        Column() {
+          Row() {
+            Text('生成测试报告').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+            Text('12 条断言 ›').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
+          }
+          .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
           .onClick(() => { this.generateReport(); })
-        Row({ space: SpaceToken.md }) {
-          Button('清空执行记录').fontSize(FontToken.body).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary).layoutWeight(1)
-            .onClick(() => { this.clearRecords(); })
-          Button('恢复出厂方案').fontSize(FontToken.body).backgroundColor(ColorToken.dangerBg).fontColor(ColorToken.danger).layoutWeight(1)
-            .onClick(() => { this.resetAll(); })
-        }.width('100%').margin({ top: 8 })
-        Text('提示：结束应用进程后重新打开，规则、设备状态与最近 50 条执行记录会自动恢复。')
-          .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
+          Divider().color(ColorToken.border).strokeWidth(1)
+          Row() {
+            Text('清空执行记录').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+            Text('›').fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
+          }
+          .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+          .onClick(() => { this.clearRecords(); })
+          Divider().color(ColorToken.border).strokeWidth(1)
+          Row() {
+            Text('恢复出厂方案').fontSize(FontToken.body).fontColor(ColorToken.danger).layoutWeight(1)
+            Text('›').fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
+          }
+          .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+          .onClick(() => { this.resetAll(); })
+        }
+        .width('100%').padding({ left: SpaceToken.lg, right: SpaceToken.lg })
+        .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+        .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+        .alignItems(HorizontalAlign.Start)
       }.padding(SpaceToken.lg).margin({ bottom: 80 })
     }.layoutWeight(1)
   }
