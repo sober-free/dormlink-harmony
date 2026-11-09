@@ -66,6 +66,9 @@ struct Index {
   @State restoring: boolean = true;
   @State showEditor: boolean = false;
   @State editorIsNew: boolean = true;
+  /** 规则详情覆盖层（米家：列表行只留开关，操作进详情） */
+  @State showRuleDetail: boolean = false;
+  @State detailRuleId: string = '';
   @State draft: AutomationRule = makeNewRule();
   @State activeScene: string = '';
   // ---- 应用内自检报告 ----
@@ -325,6 +328,17 @@ struct Index {
       if (r.id === id) return true;
     }
     return false;
+  }
+
+  /** 按 id 取规则：详情页渲染用；找不到时退回第一条，避免空引用 */
+  private findRuleById(id: string): AutomationRule {
+    for (const r of this.rules) {
+      if (r.id === id) return r;
+    }
+    if (this.rules.length > 0) {
+      return this.rules[0];
+    }
+    return makeNewRule();
   }
 
   /**
@@ -617,6 +631,33 @@ struct Index {
     return n;
   }
 
+  /** 顶部场景化提示：按当前环境量给一句建议（对应米家顶部「今天晴 26℃，适合开窗」） */
+  private envAdvice(): string {
+    const t: number = this.env.temperature;
+    const lux: number = this.env.illuminance;
+    const hum: number = this.env.humidity;
+    const hour: number = this.env.hour;
+    if (t >= 28) {
+      return t.toString() + '℃ 偏高，建议开启空调制冷';
+    }
+    if (t <= 16) {
+      return t.toString() + '℃ 偏低，建议开启空调制热';
+    }
+    if (hum <= 35) {
+      return '湿度 ' + hum.toString() + '%，偏干，建议开启加湿器';
+    }
+    if (lux >= 800) {
+      return '光照 ' + lux.toString() + ' lux 偏强，建议放下窗帘';
+    }
+    if (this.env.occupancy && hour >= 22) {
+      return hour.toString() + ' 点且有人在室，可开启归寝照明';
+    }
+    if (!this.env.occupancy) {
+      return '当前无人，节能规则将关闭耗能设备';
+    }
+    return t.toString() + '℃ · 湿度 ' + hum.toString() + '%，体感舒适，保持当前设置即可';
+  }
+
   private sceneIcon(id: string): string {
     if (id === 'S1') {
       return '月';
@@ -659,7 +700,7 @@ struct Index {
           Text(' ▾')
             .fontSize(FontToken.label).fontColor(ColorToken.textTertiary)
         }
-        Text('本地存档 ' + this.formatTime(this.savedAt) + ' · 无云同步')
+        Text(this.envAdvice())
           .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 3 })
       }.alignItems(HorizontalAlign.Start).layoutWeight(1)
       Column() {
@@ -927,40 +968,37 @@ struct Index {
   }
 
   /**
-   * 规则行（米家列表行式）：左侧名称 + 条件/动作摘要 + 元信息，右侧开关，底部文字操作。
-   * 不再一卡一条，外层由 RulePanel 统一包一张卡并用分隔线分组。
+   * 规则行（米家列表行式）：左侧名称 + 条件/动作摘要 + 元信息，右侧开关。
+   * 整行可点进入详情页，编辑/复制/删除都收在详情里，列表保持干净。
    */
   @Builder
   RuleRow(r: AutomationRule) {
-    Column() {
-      Row() {
-        Column() {
-          Text(r.name)
-            .fontSize(FontToken.heading).fontWeight(FontWeight.Medium)
-            .fontColor(r.enabled ? ColorToken.textPrimary : ColorToken.textTertiary)
-          Text('当 ' + this.conditionText(r) + ' → ' + this.actionText(r))
-            .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
-            .margin({ top: 4 })
-            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(r.id + ' · 优先级 ' + r.priority + ' · ' + r.conditions.length + ' 个条件')
-            .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 3 })
-        }.alignItems(HorizontalAlign.Start).layoutWeight(1)
-        Toggle({ type: ToggleType.Switch, isOn: r.enabled })
-          .selectedColor(ColorToken.brand)
-          .onChange((on: boolean) => { this.toggleRule(r.id, on); })
-          .margin({ left: SpaceToken.md })
-      }.width('100%').alignItems(VerticalAlign.Top)
-      Row({ space: SpaceToken.lg }) {
-        Text('复制').fontSize(FontToken.label).fontColor(ColorToken.textTertiary)
-          .onClick(() => { this.duplicateRule(r.id); })
-        Text('编辑').fontSize(FontToken.label).fontColor(ColorToken.textTertiary)
-          .onClick(() => { this.openEditor(r); })
-        Text('删除').fontSize(FontToken.label).fontColor(ColorToken.danger)
-          .onClick(() => { this.deleteRule(r.id); })
-      }.width('100%').margin({ top: SpaceToken.sm })
+    Row() {
+      Column() {
+        Text(r.name)
+          .fontSize(FontToken.heading).fontWeight(FontWeight.Medium)
+          .fontColor(r.enabled ? ColorToken.textPrimary : ColorToken.textTertiary)
+        Text('当 ' + this.conditionText(r) + ' → ' + this.actionText(r))
+          .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
+          .margin({ top: 4 })
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(r.id + ' · 优先级 ' + r.priority + ' · ' + r.conditions.length + ' 个条件')
+          .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 3 })
+      }.alignItems(HorizontalAlign.Start).layoutWeight(1)
+      Toggle({ type: ToggleType.Switch, isOn: r.enabled })
+        .selectedColor(ColorToken.brand)
+        .onChange((on: boolean) => { this.toggleRule(r.id, on); })
+        .margin({ left: SpaceToken.md })
+      Text('›')
+        .fontSize(FontToken.heading).fontColor(ColorToken.textTertiary)
+        .margin({ left: SpaceToken.sm })
     }
     .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
-    .alignItems(HorizontalAlign.Start)
+    .alignItems(VerticalAlign.Top)
+    .onClick(() => {
+      this.detailRuleId = r.id;
+      this.showRuleDetail = true;
+    })
   }
 
   @Builder
@@ -1216,6 +1254,138 @@ struct Index {
         .alignItems(HorizontalAlign.Start)
       }.padding(SpaceToken.lg).margin({ bottom: 80 })
     }.layoutWeight(1)
+  }
+
+  /** 规则详情覆盖层：米家「列表 → 详情 → 操作」的三段式，列表行不再塞操作按钮 */
+  @Builder
+  RuleDetailPanel() {
+    Column() {
+      Row() {
+        Text('‹ 返回')
+          .fontSize(FontToken.body).fontColor(ColorToken.textSecondary)
+          .onClick(() => { this.showRuleDetail = false; })
+        Blank()
+        Text('规则详情')
+          .fontSize(FontToken.title).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+        Blank()
+        Text('   ').fontSize(FontToken.body)
+      }
+      .width('100%').padding({ top: SpaceToken.sm, bottom: SpaceToken.md })
+
+      Scroll() {
+        Column({ space: SpaceToken.md }) {
+          // 概览卡
+          Column() {
+            Text(this.findRuleById(this.detailRuleId).name)
+              .fontSize(FontToken.display).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+            Text(this.findRuleById(this.detailRuleId).id + ' · 优先级 ' +
+                 this.findRuleById(this.detailRuleId).priority + ' · ' +
+                 (this.findRuleById(this.detailRuleId).enabled ? '已启用' : '已停用'))
+              .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 6 })
+            Row() {
+              Text(this.findRuleById(this.detailRuleId).enabled ? '启用联动' : '已停用')
+                .fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+              Toggle({ type: ToggleType.Switch, isOn: this.findRuleById(this.detailRuleId).enabled })
+                .selectedColor(ColorToken.brand)
+                .onChange((on: boolean) => { this.toggleRule(this.detailRuleId, on); })
+            }.width('100%').margin({ top: SpaceToken.lg })
+          }
+          .width('100%').padding(SpaceToken.lg).backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+          .alignItems(HorizontalAlign.Start)
+
+          this.SectionTitle('触发条件（全部满足才触发）')
+          Column() {
+            ForEach(this.findRuleById(this.detailRuleId).conditions, (c: Condition, idx: number) => {
+              if (idx > 0) {
+                Divider().color(ColorToken.border).strokeWidth(1)
+              }
+              Row() {
+                Text('条件 ' + (idx + 1).toString())
+                  .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).width(56)
+                Text(describeCondition(c))
+                  .fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+              }
+              .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+            }, (c: Condition, idx: number) => idx.toString() + c.metric + c.op + c.value.toString())
+          }
+          .width('100%').padding({ left: SpaceToken.lg, right: SpaceToken.lg })
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+
+          this.SectionTitle('执行动作')
+          Column() {
+            ForEach(this.findRuleById(this.detailRuleId).actions, (a: DeviceAction, idx: number) => {
+              if (idx > 0) {
+                Divider().color(ColorToken.border).strokeWidth(1)
+              }
+              Row() {
+                Text(this.deviceName(a.deviceId))
+                  .fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+                Text(a.power ? '开启 · ' + a.value.toString() : '关闭')
+                  .fontSize(FontToken.body).fontColor(ColorToken.textSecondary)
+              }
+              .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+            }, (a: DeviceAction, idx: number) => idx.toString() + a.deviceId + a.value.toString())
+          }
+          .width('100%').padding({ left: SpaceToken.lg, right: SpaceToken.lg })
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+
+          if (this.findRuleById(this.detailRuleId).description.length > 0) {
+            Text(this.findRuleById(this.detailRuleId).description)
+              .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
+              .width('100%').padding({ left: SpaceToken.xs })
+          }
+
+          this.SectionTitle('操作')
+          Column() {
+            Row() {
+              Text('编辑规则').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+              Text('›').fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
+            }
+            .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+            .onClick(() => {
+              this.showRuleDetail = false;
+              this.openEditor(this.findRuleById(this.detailRuleId));
+            })
+            Divider().color(ColorToken.border).strokeWidth(1)
+            Row() {
+              Text('复制为停用副本').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+              Text('›').fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
+            }
+            .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+            .onClick(() => {
+              this.duplicateRule(this.detailRuleId);
+              this.showRuleDetail = false;
+            })
+            Divider().color(ColorToken.border).strokeWidth(1)
+            Row() {
+              Text('删除规则').fontSize(FontToken.body).fontColor(ColorToken.danger).layoutWeight(1)
+              Text('›').fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
+            }
+            .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+            .onClick(() => {
+              this.deleteRule(this.detailRuleId);
+              this.showRuleDetail = false;
+            })
+          }
+          .width('100%').padding({ left: SpaceToken.lg, right: SpaceToken.lg })
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+          .alignItems(HorizontalAlign.Start)
+        }
+        .padding({ bottom: 40 })
+        .width('100%')
+        .justifyContent(FlexAlign.Start)
+      }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+      .align(Alignment.Top)
+    }
+    .width('100%').height('100%')
+    .padding({ left: SpaceToken.lg, right: SpaceToken.lg })
+    .backgroundColor(ColorToken.canvas)
   }
 
   @Builder
@@ -1620,6 +1790,9 @@ struct Index {
       }
       .width('100%').height('100%').backgroundColor(ColorToken.canvas)
 
+      if (this.showRuleDetail) {
+        this.RuleDetailPanel()
+      }
       if (this.showEditor) {
         this.RuleEditorPanel()
       }
