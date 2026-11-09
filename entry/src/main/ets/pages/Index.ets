@@ -1523,6 +1523,31 @@ struct Index {
     this.persistAll();
   }
 
+  /** 设备的出厂设定值（取 DEFAULT_DEVICES 的初始值） */
+  private defaultDeviceValue(id: string): number {
+    for (const d of DEFAULT_DEVICES) {
+      if (d.id === id) {
+        return d.value;
+      }
+    }
+    return 0;
+  }
+
+  /** 重置单个设备：关闭电源并恢复出厂设定值 */
+  private resetDeviceValue(id: string): void {
+    const list: DeviceState[] = [];
+    for (const d of this.devices) {
+      if (d.id === id) {
+        list.push({ id: d.id, name: d.name, power: false, value: this.defaultDeviceValue(id), unit: d.unit });
+      } else {
+        list.push(d);
+      }
+    }
+    this.devices = list;
+    this.showToast(this.deviceName(id as DeviceId) + ' 已恢复默认值');
+    this.persistAll();
+  }
+
   /** 定时关闭：选择后按分钟数在后台触发，可再次选择取消；同时记录到点时间用于界面倒计时（T1） */
   private setDeviceTimer(minutes: number): void {
     if (this.timerId >= 0) {
@@ -1615,36 +1640,31 @@ struct Index {
 
       Scroll() {
         Column({ space: SpaceToken.md }) {
-          // 设备主卡
-          Column() {
+          // 概览：图标 + 名称/状态 + 电源开关（米家把开关放在设备头部）
+          Row() {
             Column() {
               Image(this.deviceImage(this.detailId))
-                .width(56).height(56)
+                .width(52).height(52)
                 .objectFit(ImageFit.Contain)
                 .opacity(this.findDevice(this.detailId).power ? 1 : 0.45)
             }
-            .width(88).height(88)
+            .width(80).height(80)
             .justifyContent(FlexAlign.Center)
             .backgroundColor(this.findDevice(this.detailId).power ? ColorToken.accentSubtle : ColorToken.surfaceAlt)
             .borderRadius(RadiusToken.pill)
-            Text(this.findDevice(this.detailId).name)
-              .fontSize(FontToken.title).fontColor(ColorToken.textPrimary).margin({ top: SpaceToken.md })
-            Text(this.findDevice(this.detailId).power
-              ? '已开启 · ' + this.findDevice(this.detailId).value.toString() + this.findDevice(this.detailId).unit
-              : '已关闭')
-              .fontSize(FontToken.caption)
-              .fontColor(this.findDevice(this.detailId).power ? ColorToken.success : ColorToken.textTertiary)
-              .margin({ top: 4 })
-          }
-          .width('100%').padding(SpaceToken.xl)
-          .backgroundColor(ColorToken.surface)
-          .borderRadius(RadiusToken.lg)
-          .alignItems(HorizontalAlign.Center)
 
-          // 开关
-          Row() {
-            Text('电源开关').fontSize(FontToken.body).fontColor(ColorToken.textPrimary)
-            Blank()
+            Column() {
+              Text(this.findDevice(this.detailId).name)
+                .fontSize(FontToken.display).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+              Text(this.findDevice(this.detailId).power
+                ? '已开启 · ' + this.findDevice(this.detailId).value.toString() + this.findDevice(this.detailId).unit
+                : '已关闭')
+                .fontSize(FontToken.caption)
+                .fontColor(this.findDevice(this.detailId).power ? ColorToken.success : ColorToken.textTertiary)
+                .margin({ top: 4 })
+            }
+            .layoutWeight(1).alignItems(HorizontalAlign.Start).margin({ left: SpaceToken.lg })
+
             Toggle({ type: ToggleType.Switch, isOn: this.findDevice(this.detailId).power })
               .selectedColor(ColorToken.brand)
               .onChange((on: boolean) => {
@@ -1655,8 +1675,10 @@ struct Index {
           }
           .width('100%').padding(SpaceToken.lg)
           .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+          .alignItems(VerticalAlign.Center)
 
-          // 参数调节
+          this.SectionTitle('参数')
           Column() {
             Row() {
               Text(this.detailId === 'ac' ? '目标温度' : (this.detailId === 'curtain' ? '开合度' :
@@ -1684,16 +1706,16 @@ struct Index {
           }
           .width('100%').padding(SpaceToken.lg)
           .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
           .alignItems(HorizontalAlign.Start)
 
-          // 定时关闭
+          this.SectionTitle('定时关闭')
           Column() {
-            Text('定时关闭').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).width('100%')
             Row({ space: SpaceToken.sm }) {
               this.TimerPill(0, '不定时')
               this.TimerPill(30, '30 分钟')
               this.TimerPill(60, '1 小时')
-            }.width('100%').margin({ top: SpaceToken.md })
+            }.width('100%')
             Text(this.timerHint())
               .fontSize(FontToken.caption)
               .fontColor(this.timerActive() ? ColorToken.success : ColorToken.textTertiary)
@@ -1701,26 +1723,69 @@ struct Index {
           }
           .width('100%').padding(SpaceToken.lg)
           .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
           .alignItems(HorizontalAlign.Start)
 
-          // 设备信息
-          Column({ space: SpaceToken.sm }) {
+          this.SectionTitle('设备信息')
+          Column() {
             Row() {
-              Text('设备 ID').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).layoutWeight(1)
-              Text(this.detailId).fontSize(FontToken.caption).fontColor(ColorToken.textPrimary)
-            }.width('100%')
+              Text('设备 ID').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+              Text(this.detailId).fontSize(FontToken.body).fontColor(ColorToken.textSecondary)
+            }.width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+            Divider().color(ColorToken.border).strokeWidth(1)
             Row() {
-              Text('计量单位').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).layoutWeight(1)
-              Text(this.findDevice(this.detailId).unit).fontSize(FontToken.caption).fontColor(ColorToken.textPrimary)
-            }.width('100%')
+              Text('计量单位').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+              Text(this.findDevice(this.detailId).unit).fontSize(FontToken.body).fontColor(ColorToken.textSecondary)
+            }.width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+            Divider().color(ColorToken.border).strokeWidth(1)
+            Row() {
+              Text('出厂设定').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+              Text(this.defaultDeviceValue(this.detailId).toString() + this.findDevice(this.detailId).unit)
+                .fontSize(FontToken.body).fontColor(ColorToken.textSecondary)
+            }.width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
           }
-          .width('100%').padding(SpaceToken.lg)
+          .width('100%').padding({ left: SpaceToken.lg, right: SpaceToken.lg })
           .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+          .alignItems(HorizontalAlign.Start)
+
+          this.SectionTitle('操作')
+          Column() {
+            Row() {
+              Text('重置参数').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+              Text('恢复出厂 ' + this.defaultDeviceValue(this.detailId).toString() +
+                   this.findDevice(this.detailId).unit + '  ›')
+                .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
+            }
+            .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+            .onClick(() => { this.resetDeviceValue(this.detailId); })
+            Divider().color(ColorToken.border).strokeWidth(1)
+            Row() {
+              Text('取消定时').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).layoutWeight(1)
+              Text(this.timerActive() ? '生效中 ›' : '未设定 ›')
+                .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary)
+            }
+            .width('100%').padding({ top: SpaceToken.md, bottom: SpaceToken.md })
+            .onClick(() => {
+              if (this.timerActive()) {
+                this.setDeviceTimer(0);
+              } else {
+                this.showToast('当前没有生效中的定时');
+              }
+            })
+          }
+          .width('100%').padding({ left: SpaceToken.lg, right: SpaceToken.lg })
+          .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
+          .shadow({ radius: ShadowToken.cardRadius, color: ShadowToken.cardColor, offsetY: ShadowToken.cardOffsetY })
+          .alignItems(HorizontalAlign.Start)
         }
         .padding({ bottom: 40 })
+        .width('100%')
+        .justifyContent(FlexAlign.Start)
       }
       .layoutWeight(1)
       .scrollBar(BarState.Off)
+      .align(Alignment.Top)
     }
     .width('100%').height('100%')
     .padding({ left: SpaceToken.lg, right: SpaceToken.lg })
