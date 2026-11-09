@@ -124,7 +124,7 @@ HINTS = [
     None,
 
     # 9 技术应用
-    """状态管理采用 ArkUI 的 @State 与 @Builder：页面把 devices、rules、records、conflicts、warnings 作为 @State 变量，引擎返回新数组后整体赋值，触发四个页签同步刷新；@Builder 复用设备卡、规则卡、场景卡与记录行，四个 TabContent 共享同一份状态。交互使用 Slider（4 项环境量）、Toggle（在室状态与规则启停）、Select（条件环境量/运算符与动作设备）、TextInput（阈值与优先级）与 Button，规则编辑器通过重建 draft 对象驱动 ForEach 更新。选择 ArkTS 而非随意写 JavaScript，是因为 ArkTS 的静态类型约束能在编译期拦住 any、对象展开、隐式类型转换等问题——开发规则编辑器时我最初想用对象展开更新草稿，正是这一约束促使我改成显式的 updateDraft() 全字段构造，反而让状态更新路径更清晰、更容易测试。持久化选择 @kit.ArkData 的 preferences 而非关系型数据库：本项目数据量小（6 条规则、5 台设备、50 条日志），单 JSON 快照一次 flush 就够，读写路径短、异常面小；代价是不适合复杂查询与大数据量，这一点在个人总结中进一步说明。用户操作 → 引擎计算 → @State 回填 → 持久化全部在同一 UI 线程同步完成，没有引入跨线程事件总线，避免异步时序造成状态不一致。""",
+    """状态管理采用 ArkUI 的 @State 与 @Builder：页面把 devices、rules、records、conflicts、warnings 作为 @State 变量，引擎返回新数组后整体赋值，触发四个页签同步刷新；@Builder 复用设备卡、规则卡、场景卡与记录行，四个 TabContent 共享同一份状态。交互使用 Slider（4 项环境量）、Toggle（在室状态与规则启停）、Select（条件环境量/运算符与动作设备）、TextInput（阈值与优先级）与 Button，规则编辑器通过重建 draft 对象驱动 ForEach 更新。选择 ArkTS 而非随意写 JavaScript，是因为 ArkTS 的静态类型约束能在编译期拦住 any、对象展开、隐式类型转换等问题——开发规则编辑器时我最初想用对象展开更新草稿，正是这一约束促使我改成显式的 updateDraft() 全字段构造，反而让状态更新路径更清晰、更容易测试。持久化选择 @kit.ArkData 的 preferences 而非关系型数据库：本项目数据量小（6 条规则、5 台设备、50 条日志），单 JSON 快照一次 flush 就够，读写路径短、异常面小；代价是不适合复杂查询与大数据量，这一点在个人总结中进一步说明。用户操作 → 引擎计算 → @State 回填 → 持久化全部在同一 UI 线程同步完成，没有引入跨线程事件总线，避免异步时序造成状态不一致。另一个踩坑是 @State 与 @Builder 的配合：最初把数值作为 @Builder 的参数传入（MetricSlider 的 value、DeviceCard 的 d），状态恢复后界面仍显示旧值——因为 @Builder 的值传递参数不随状态重建，ForEach 以 d.id 作 key 也会复用旧节点；改为在 @Builder 内直接读 this.envValue(key)，并把 key 拼上 power、value、priority 等状态字段后刷新才正确（对应提交 d4b0cc2）。""",
 
     # 10 Mock 测试设计
     """测试围绕本人负责的规则引擎业务规则展开，验证目标是：条件判定是否正确、执行顺序是否稳定、冲突裁决是否符合优先级、异常输入是否会崩溃、存档能否正确往返。所有输入都用本地对象构造 Mock 数据——Environment 由工厂函数生成，设备状态由 cloneDevices(DEFAULT_DEVICES) 生成，规则由 cloneRule() 复制，不依赖任何真实硬件、网络或云服务；每条用例使用独立副本，互不污染。选取三类输入的理由：正常输入（如 30℃ 只放 R002）验证主流程与 before→after 记录；边界输入（28/27℃、35/36%、hour=0/23、空规则表、空设备表）验证含等号阈值与空集合行为；异常输入（温度 999、NaN、null 环境、未知环境量/运算符、空条件规则、损坏 JSON）验证降级路径不会让应用崩溃。测试文件 tests/node/rule-engine.test.mjs 直接 import 工程里的 RuleEngine.ts 与 DefaultData.ts，即应用实际运行的那份源码，不存在「测试代码另写一套逻辑」的问题。运行命令：node --test tests/node/rule-engine.test.mjs（Node.js 22.22.2）；DevEco Studio 侧另有 @ohos/hypium 编写的 14 条对应用例。""",
@@ -178,7 +178,7 @@ TABLE_ROWS = {
         ['GitHub账号', 'sober-free'],
         ['GitHub仓库链接', 'https://github.com/sober-free/dormlink-harmony'],
         ['小组成员', '无（独立完成）'],
-        ['开发环境', 'DevEco Studio（HarmonyOS 5.0 / API 12）、ArkTS + ArkUI（Stage 模型）、@kit.ArkData Preferences；Node.js 22.22.2 用于纯逻辑测试'],
+        ['开发环境', 'DevEco Studio 5.0.5 Release（HarmonyOS 5.0.5 / API 17）、ArkTS + ArkUI（Stage 模型）、@kit.ArkData Preferences；Node.js 22.22.2 用于纯逻辑测试'],
     ],
     5: [  # 表2.1 系统模块及接口关系（3 行）
         ['pages/Index.ets', '四页签 UI、@State 状态管理、规则编辑器', '用户操作 → 界面刷新 / 持久化请求', '徐豪'],

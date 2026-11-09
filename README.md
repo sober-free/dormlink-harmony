@@ -43,9 +43,9 @@
 
 | 项目 | 版本/说明 |
 | --- | --- |
-| IDE | DevEco Studio（HarmonyOS 5.0 / API 12 对应版本） |
+| IDE | DevEco Studio 5.0.5 Release（HarmonyOS 5.0.5 / API 17） |
 | 语言 / 框架 | ArkTS、ArkUI（声明式 UI）、Stage 模型 |
-| SDK | `compatibleSdkVersion: 5.0.0(12)`，`runtimeOS: HarmonyOS` |
+| SDK | `compatibleSdkVersion: 5.0.5(17)`，`runtimeOS: HarmonyOS` |
 | 持久化 | `@kit.ArkData` → `preferences` |
 | 测试框架 | `@ohos/hypium`（ohosTest）+ `node:test`（纯逻辑） |
 | 纯逻辑测试环境 | Node.js ≥ 22.6（用原生 TypeScript type-stripping 直接执行 `.ts` 源码） |
