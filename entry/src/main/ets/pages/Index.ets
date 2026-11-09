@@ -82,7 +82,15 @@ struct Index {
   @State showDetail: boolean = false;
   @State detailId: string = 'main_light';
   @State timerMinutes: number = 0;
+  /** 定时关闭的到点时间戳，0 表示当前设备未设定定时（T1） */
+  @State timerEndAt: number = 0;
+  /** 日志页筛选：只显示被拦截的记录（T3） */
+  @State logOnlyBlocked: boolean = false;
   private timerId: number = -1;
+  /** 定时器归属设备：切换设备后不再显示别的设备的倒计时（T1） */
+  private timerDeviceId: string = '';
+  /** toast 定时器句柄：连续提示时先清掉上一个，避免提前清空后一条 */
+  private toastTimerId: number = -1;
 
   async aboutToAppear(): Promise<void> {
     const result: RestoreResult = await DormStore.restore(this.getCtx());
@@ -90,6 +98,18 @@ struct Index {
     this.restoreMessage = result.message;
     this.restored = result.restored;
     this.restoring = false;
+  }
+
+  /** 页面销毁时统一释放定时器，避免后台回调继续改已卸载页面的状态 */
+  aboutToDisappear(): void {
+    if (this.timerId >= 0) {
+      clearTimeout(this.timerId);
+      this.timerId = -1;
+    }
+    if (this.toastTimerId >= 0) {
+      clearTimeout(this.toastTimerId);
+      this.toastTimerId = -1;
+    }
   }
 
   private getCtx(): common.Context {
@@ -140,8 +160,12 @@ struct Index {
 
   private showToast(msg: string): void {
     this.toast = msg;
-    setTimeout(() => {
+    if (this.toastTimerId >= 0) {
+      clearTimeout(this.toastTimerId);
+    }
+    this.toastTimerId = setTimeout(() => {
       this.toast = '';
+      this.toastTimerId = -1;
     }, 2400);
   }
 
@@ -267,6 +291,67 @@ struct Index {
     }
     this.rules = next;
     this.showToast('已删除规则 ' + id);
+    this.persistAll();
+  }
+
+  /** 生成下一个规则 id：取现有 Rxxx 的最大序号 +1，冲突时继续递增（T2） */
+  private nextRuleId(): string {
+    let max = 0;
+    for (const r of this.rules) {
+      if (r.id.length === 4 && r.id.charAt(0) === 'R') {
+        const n = Number.parseInt(r.id.substring(1), 10);
+        if (Number.isFinite(n) && n > max) {
+          max = n;
+        }
+      }
+    }
+    let seq = max + 1;
+    let id = 'R' + this.padSeq(seq);
+    while (this.hasRule(id)) {
+      seq = seq + 1;
+      id = 'R' + this.padSeq(seq);
+    }
+    return id;
+  }
+
+  private padSeq(n: number): string {
+    if (n < 10) return '00' + n.toString();
+    if (n < 100) return '0' + n.toString();
+    return n.toString();
+  }
+
+  private hasRule(id: string): boolean {
+    for (const r of this.rules) {
+      if (r.id === id) return true;
+    }
+    return false;
+  }
+
+  /**
+   * 复制规则为「停用副本」：条件/动作/优先级与源规则一致，仅 id、名称、启停不同（T2）。
+   * 副本默认停用，避免复制后立即参与演练造成意外联动。
+   */
+  private duplicateRule(id: string): void {
+    let sourceIndex = -1;
+    for (let i = 0; i < this.rules.length; i++) {
+      if (this.rules[i].id === id) {
+        sourceIndex = i;
+      }
+    }
+    if (sourceIndex < 0) {
+      this.showToast('未找到规则 ' + id);
+      return;
+    }
+    const source = this.rules[sourceIndex];
+    const copy = cloneRule(source);
+    copy.id = this.nextRuleId();
+    copy.name = source.name + ' 副本';
+    copy.enabled = false;
+    const next: AutomationRule[] = [];
+    for (const r of this.rules) next.push(cloneRule(r));
+    next.push(copy);
+    this.rules = next;
+    this.showToast('已复制为 ' + copy.id + '（默认停用）');
     this.persistAll();
   }
 
@@ -460,6 +545,31 @@ struct Index {
     this.executedCount = 0;
     this.blockedCount = 0;
     this.persistAll();
+  }
+
+  /** 日志页当前展示的记录：只看拦截时过滤出 blocked === true（T3，只影响展示，不改数据） */
+  private visibleRecords(): ExecutionRecord[] {
+    if (!this.logOnlyBlocked) {
+      return this.records;
+    }
+    const list: ExecutionRecord[] = [];
+    for (const r of this.records) {
+      if (r.blocked) {
+        list.push(r);
+      }
+    }
+    return list;
+  }
+
+  /** 被拦截记录条数，用于筛选药丸上的计数（T3） */
+  private blockedRecords(): number {
+    let n = 0;
+    for (const r of this.records) {
+      if (r.blocked) {
+        n = n + 1;
+      }
+    }
+    return n;
   }
 
   /** 应用内自检：在本进程真实执行规则引擎断言并生成报告 */
@@ -679,8 +789,8 @@ struct Index {
     .borderRadius(RadiusToken.lg)
     .alignItems(HorizontalAlign.Start)
     .onClick(() => {
+      // 倒计时展示由 timerDeviceId 判定，切换设备时无需清状态：回到原设备仍能看到剩余定时
       this.detailId = d.id;
-      this.timerMinutes = 0;
       this.showDetail = true;
     })
   }
@@ -789,6 +899,8 @@ struct Index {
       Text(r.description)
         .fontSize(FontToken.caption).fontColor(ColorToken.textTertiary).margin({ top: 6 })
       Row({ space: SpaceToken.md }) {
+        Button('复制').fontSize(FontToken.label).backgroundColor(ColorToken.borderStrong)
+          .onClick(() => { this.duplicateRule(r.id); })
         Button('编辑').fontSize(FontToken.label).backgroundColor(ColorToken.borderStrong)
           .onClick(() => { this.openEditor(r); })
         Button('删除').fontSize(FontToken.label).backgroundColor(ColorToken.dangerBg)
@@ -900,6 +1012,18 @@ struct Index {
     .alignItems(HorizontalAlign.Start)
   }
 
+  /** 日志筛选药丸：全部 / 只看拦截（T3） */
+  @Builder
+  LogFilterPill(label: string, onlyBlocked: boolean) {
+    Text(label)
+      .fontSize(FontToken.label)
+      .fontColor(this.logOnlyBlocked === onlyBlocked ? ColorToken.textInverse : ColorToken.textSecondary)
+      .backgroundColor(this.logOnlyBlocked === onlyBlocked ? ColorToken.brand : ColorToken.surfaceAlt)
+      .padding({ left: 14, right: 14, top: 7, bottom: 7 })
+      .borderRadius(RadiusToken.pill)
+      .onClick(() => { this.logOnlyBlocked = onlyBlocked; })
+  }
+
   @Builder
   LogPanel() {
     Scroll() {
@@ -908,11 +1032,15 @@ struct Index {
         Text('持久化：Preferences / dormlink_state · 存档时间 ' + this.formatTime(this.savedAt))
           .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
         Text(this.restoreMessage).fontSize(FontToken.caption).fontColor(this.restored ? ColorToken.success : ColorToken.warning)
-        if (this.records.length === 0) {
-          Text('尚未执行演练，请到「联动台」或「演练」页运行一次')
+        Row({ space: SpaceToken.sm }) {
+          this.LogFilterPill('全部 ' + this.records.length, false)
+          this.LogFilterPill('只看拦截 ' + this.blockedRecords(), true)
+        }.width('100%')
+        if (this.visibleRecords().length === 0) {
+          Text(this.logOnlyBlocked ? '当前没有拦截记录' : '尚未执行演练，请到「联动台」或「演练」页运行一次')
             .fontSize(FontToken.body).fontColor(ColorToken.textTertiary)
         }
-        ForEach(this.records, (r: ExecutionRecord) => {
+        ForEach(this.visibleRecords(), (r: ExecutionRecord) => {
           this.RecordRow(r)
         }, (r: ExecutionRecord) => r.order.toString() + r.ruleId + '|' + r.change.afterValue.toString())
 
@@ -1076,7 +1204,7 @@ struct Index {
     this.persistAll();
   }
 
-  /** 定时关闭：选择后按分钟数在后台触发，可再次选择取消 */
+  /** 定时关闭：选择后按分钟数在后台触发，可再次选择取消；同时记录到点时间用于界面倒计时（T1） */
   private setDeviceTimer(minutes: number): void {
     if (this.timerId >= 0) {
       clearTimeout(this.timerId);
@@ -1085,30 +1213,61 @@ struct Index {
     this.timerMinutes = minutes;
     if (minutes > 0) {
       const targetId: string = this.detailId;
+      this.timerDeviceId = targetId;
+      this.timerEndAt = Date.now() + minutes * 60000;
       this.timerId = setTimeout(() => {
         this.setDevicePower(targetId, false);
         this.timerMinutes = 0;
+        this.timerEndAt = 0;
+        this.timerDeviceId = '';
         this.timerId = -1;
-        this.showToast('定时关闭已执行：' + targetId);
+        this.showToast('定时关闭已执行：' + this.deviceName(targetId as DeviceId));
       }, minutes * 60000);
       this.showToast('已设定 ' + minutes + ' 分钟后关闭');
     } else {
+      this.timerEndAt = 0;
+      this.timerDeviceId = '';
       this.showToast('已取消定时');
     }
   }
 
+  /** 当前设备是否有生效中的定时（T1） */
+  private timerActive(): boolean {
+    return this.timerDeviceId === this.detailId && this.timerEndAt > 0;
+  }
+
+  /** 定时状态文案：有定时显示到点时刻，否则提示未设定（T1） */
+  private timerHint(): string {
+    if (!this.timerActive()) {
+      return '未设定定时';
+    }
+    return '将于 ' + this.formatTime(this.timerEndAt) + ' 自动关闭';
+  }
+
   private timerPillStyle(m: number): string {
-    if (this.timerMinutes === m) {
+    if (this.timerActive() && this.timerMinutes === m) {
       return ColorToken.brand;
     }
     return ColorToken.surfaceAlt;
   }
 
   private timerPillColor(m: number): string {
-    if (this.timerMinutes === m) {
+    if (this.timerActive() && this.timerMinutes === m) {
       return ColorToken.textInverse;
     }
     return ColorToken.textSecondary;
+  }
+
+  /** 定时档位药丸：三档共用一套样式，避免三处重复（T1） */
+  @Builder
+  TimerPill(minutes: number, label: string) {
+    Text(label)
+      .fontSize(FontToken.label)
+      .fontColor(this.timerPillColor(minutes))
+      .backgroundColor(this.timerPillStyle(minutes))
+      .padding({ left: 14, right: 14, top: 7, bottom: 7 })
+      .borderRadius(RadiusToken.pill)
+      .onClick(() => { this.setDeviceTimer(minutes); })
   }
 
   @Builder
@@ -1204,28 +1363,14 @@ struct Index {
           Column() {
             Text('定时关闭').fontSize(FontToken.body).fontColor(ColorToken.textPrimary).width('100%')
             Row({ space: SpaceToken.sm }) {
-              Text('不定时')
-                .fontSize(FontToken.label)
-                .fontColor(this.timerPillColor(0))
-                .backgroundColor(this.timerPillStyle(0))
-                .padding({ left: 14, right: 14, top: 7, bottom: 7 })
-                .borderRadius(RadiusToken.pill)
-                .onClick(() => { this.setDeviceTimer(0); })
-              Text('30 分钟')
-                .fontSize(FontToken.label)
-                .fontColor(this.timerPillColor(30))
-                .backgroundColor(this.timerPillStyle(30))
-                .padding({ left: 14, right: 14, top: 7, bottom: 7 })
-                .borderRadius(RadiusToken.pill)
-                .onClick(() => { this.setDeviceTimer(30); })
-              Text('1 小时')
-                .fontSize(FontToken.label)
-                .fontColor(this.timerPillColor(60))
-                .backgroundColor(this.timerPillStyle(60))
-                .padding({ left: 14, right: 14, top: 7, bottom: 7 })
-                .borderRadius(RadiusToken.pill)
-                .onClick(() => { this.setDeviceTimer(60); })
+              this.TimerPill(0, '不定时')
+              this.TimerPill(30, '30 分钟')
+              this.TimerPill(60, '1 小时')
             }.width('100%').margin({ top: SpaceToken.md })
+            Text(this.timerHint())
+              .fontSize(FontToken.caption)
+              .fontColor(this.timerActive() ? ColorToken.success : ColorToken.textTertiary)
+              .width('100%').margin({ top: SpaceToken.sm })
           }
           .width('100%').padding(SpaceToken.lg)
           .backgroundColor(ColorToken.surface).borderRadius(RadiusToken.lg)
