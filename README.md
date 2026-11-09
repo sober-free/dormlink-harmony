@@ -31,7 +31,7 @@
 | 冲突处理 | 明确执行顺序或优先级 | 按 `(priority 升序, id 升序)` 稳定排序；同一设备通道仅最高优先级规则写入，其余动作拦截并生成 `ConflictRecord` |
 | 场景演练 | ≥2 组 | **4 组**：S1 夏夜归寝、S2 午后无人·冲突、S3 干燥清晨、S4 深夜无人 |
 | 持久化 | 设置、规则、执行记录可恢复 | Preferences 单 JSON 快照（`dormlink_state`），保留最近 50 条记录；进程重启自动恢复 |
-| 测试 | ≥6 条，覆盖正常/边界/异常 | Node 侧 **19 条全部通过**，DevEco `ohosTest` 侧 14 条 |
+| 测试 | ≥6 条，覆盖正常/边界/异常 | Node 侧 **20 条全部通过**（正常 8 / 边界 5 / 异常 7），DevEco `ohosTest` 侧 14 条 |
 
 ### 四个页签
 
@@ -82,10 +82,11 @@ dormlink-harmony/
 │   ├── ets/repository/StorageService.ets ★ Preferences 读写与异常捕获
 │   └── resources/                  页面路由、字符串、颜色、图标
 ├── entry/src/ohosTest/             ★ DevEco 侧 hypium 单元测试（14 条）
-├── tests/node/                     ★ Node 侧测试（19 条，直接加载上面的业务源码）
+├── tests/node/                     ★ Node 侧测试（20 条，直接加载上面的业务源码）
 ├── docs/
+│   ├── 技术文档.md                 ★ 接手必读：架构、调用链、函数索引、改动指南、已知坑
 │   ├── 软件需求说明书.md           ★ 需求、数据模型、接口、分工、测试、验收
-│   ├── 测试运行日志.md             ★ 真实命令输出（19/19 通过）
+│   ├── 测试运行日志.md             ★ 真实命令输出（20/20 通过）
 │   ├── 设计规范.md                 ★ Design System：Token、组件、布局、自查清单
 │   ├── 协作任务清单.md             两人分工待办（文件路径 / 改动点 / 验收标准）
 │   ├── 运行与录屏指南.md           导入/编译/截图/录屏分镜
@@ -115,10 +116,10 @@ dormlink-harmony/
 
 ## 7. 自动化测试与证据
 
-- `tests/node/rule-engine.test.mjs`：19 条，`node --test` 实测 **19 通过 / 0 失败**，完整 TAP 输出见 [`docs/测试运行日志.md`](docs/测试运行日志.md)。
+- `tests/node/rule-engine.test.mjs`：20 条，`cd tests/node && npm test` 实测 **20 通过 / 0 失败**，完整 TAP 输出见 [`docs/测试运行日志.md`](docs/测试运行日志.md)。
 - `entry/src/ohosTest/ets/test/RuleEngine.test.ets`：14 条 `@ohos/hypium` 用例，在 DevEco Studio 中右键 `ohosTest` → `Run 'Tests in entry'` 执行。
 - 测试直接 import `entry/src/main/ets/engine/RuleEngine.ts`，即应用实际运行的那份源码，**没有另写模拟实现**。
-- 三类覆盖：正常 7 / 边界 5 / 异常 7（Node 侧），详见需求说明书第 7 节。
+- 三类覆盖：正常 8 / 边界 5 / 异常 7（Node 侧），详见需求说明书第 7 节。
 
 ## 8. 运行截图与演示视频
 
