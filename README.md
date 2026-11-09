@@ -117,7 +117,8 @@ dormlink-harmony/
 | `06-conflict-fixed.jpeg` | 一键修复后：当前无控制冲突 |
 | `07-execution-log.jpeg` | 执行日志：#1~#5，含「已拦截」与设备 before→after |
 | `08-restore-after-restart.jpeg` | 结束进程重启后：已恢复存档 + 恢复提示 |
-| `demo-recording.mp4` | 演示视频（18 fps / 93 秒，逐变量联动演示 + 冲突修复 + 重启恢复，结尾为自动化测试结果） |
+| `09-test-report.jpeg` | 应用内「生成测试报告」：12 条断言全部通过（正常 5 / 边界 3 / 异常 4） |
+| `demo-recording.mp4` | 演示视频（18 fps / 124 秒，看规则 → 逐条改数据验证设备 → 异常校验 → 场景冲突 → 日志 → 生成测试报告 → 重启恢复） |
 
 采集方式：`hvigorw.js assembleHap` 编译未签名 HAP → `hdc` 安装启动 → `uitest dumpLayout` + `uiInput` 驱动界面 → `snapshot_display` 截屏，完整命令与执行记录见 [`docs/运行与录屏指南.md`](docs/运行与录屏指南.md)。
 
