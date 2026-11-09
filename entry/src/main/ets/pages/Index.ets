@@ -554,13 +554,35 @@ struct Index {
 
   private deviceIcon(id: DeviceId): string {
     switch (id) {
-      case 'main_light': return '☀';
-      case 'ac': return '❄';
-      case 'curtain': return '▤';
-      case 'fan': return '✳';
-      case 'humidifier': return '◍';
+      case 'main_light': return '灯';
+      case 'ac': return '冷';
+      case 'curtain': return '帘';
+      case 'fan': return '风';
+      case 'humidifier': return '湿';
       default: return '●';
     }
+  }
+
+  private resolveNavColor(index: number): string {
+    if (this.currentTab === index) {
+      return ColorToken.brand;
+    }
+    return ColorToken.textTertiary;
+  }
+
+  @Builder
+  TabCell(label: string, icon: string, index: number) {
+    Column() {
+      Text(icon)
+        .fontSize(19)
+        .fontColor(this.resolveNavColor(index))
+      Text(label)
+        .fontSize(FontToken.caption)
+        .fontColor(this.resolveNavColor(index))
+        .margin({ top: 2 })
+    }
+    .width('100%').height('100%')
+    .justifyContent(FlexAlign.Center)
   }
 
   @Builder
@@ -568,36 +590,37 @@ struct Index {
     Column() {
       Row() {
         Text(this.deviceIcon(d.id))
-          .fontSize(18)
-          .fontColor(d.power ? ColorToken.success : ColorToken.textTertiary)
-          .width(42).height(42)
+          .fontSize(17)
+          .fontColor(d.power ? ColorToken.brand : ColorToken.textTertiary)
+          .width(SizeToken.iconBox).height(SizeToken.iconBox)
           .textAlign(TextAlign.Center)
-          .backgroundColor(d.power ? ColorToken.successBg : ColorToken.surfaceAlt)
+          .backgroundColor(d.power ? ColorToken.accentSubtle : ColorToken.surfaceAlt)
           .borderRadius(RadiusToken.pill)
-        Column() {
-          Text(d.name).fontSize(FontToken.title).fontColor(ColorToken.textPrimary)
-          Text(d.power ? '运行中 · ' + d.value.toString() + d.unit : '已关闭')
-            .fontSize(FontToken.caption).fontColor(d.power ? ColorToken.success : ColorToken.textTertiary)
-            .margin({ top: 2 })
-        }.alignItems(HorizontalAlign.Start).layoutWeight(1).margin({ left: SpaceToken.md })
-        Text(d.power ? 'ON' : 'OFF')
+        Blank()
+        Text(d.power ? '开' : '关')
           .fontSize(FontToken.caption)
           .fontColor(d.power ? ColorToken.textInverse : ColorToken.textTertiary)
           .backgroundColor(d.power ? ColorToken.success : ColorToken.surfaceAlt)
-          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+          .padding({ left: 8, right: 8, top: 3, bottom: 3 })
           .borderRadius(RadiusToken.pill)
       }.width('100%').alignItems(VerticalAlign.Center)
+      Text(d.name)
+        .fontSize(FontToken.title).fontColor(ColorToken.textPrimary).margin({ top: SpaceToken.md })
+      Text(d.power ? d.value.toString() + d.unit : '已关闭')
+        .fontSize(FontToken.caption)
+        .fontColor(d.power ? ColorToken.success : ColorToken.textTertiary)
+        .margin({ top: 2 })
       if (d.power) {
         Progress({ value: d.value, total: 100, type: ProgressType.Linear })
-          .color(ColorToken.success)
+          .color(ColorToken.brand)
           .backgroundColor(ColorToken.surfaceAlt)
-          .width('100%').height(4).margin({ top: SpaceToken.md })
+          .width('100%').height(3).margin({ top: SpaceToken.sm })
       }
     }
     .width('100%').padding(SpaceToken.lg)
     .backgroundColor(ColorToken.surface)
     .borderRadius(RadiusToken.lg)
-    .border({ width: SizeToken.borderWidth, color: d.power ? ColorToken.success : ColorToken.border })
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
@@ -623,7 +646,7 @@ struct Index {
             .fontSize(FontToken.heading).layoutWeight(1).backgroundColor(ColorToken.brand)
             .onClick(() => { this.runOnce(); })
           Button('重置环境')
-            .fontSize(FontToken.body).backgroundColor(ColorToken.borderStrong)
+            .fontSize(FontToken.body).backgroundColor(ColorToken.surfaceAlt).fontColor(ColorToken.textPrimary)
             .onClick(() => {
               this.env = normalizeEnvironment(DEFAULT_ENVIRONMENT);
               this.activeScene = '';
@@ -659,9 +682,13 @@ struct Index {
         .alignItems(HorizontalAlign.Start)
 
         Text('设备实时状态').fontSize(FontToken.heading).fontColor(ColorToken.textPrimary).width('100%')
-        ForEach(this.devices, (d: DeviceState) => {
-          this.DeviceCard(d)
-        }, (d: DeviceState) => d.id + '|' + (d.power ? '1' : '0') + '|' + d.value.toString())
+        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
+          ForEach(this.devices, (d: DeviceState) => {
+            Column() {
+              this.DeviceCard(d)
+            }.width('48%').margin({ bottom: SpaceToken.md })
+          }, (d: DeviceState) => d.id + '|' + (d.power ? '1' : '0') + '|' + d.value.toString())
+        }.width('100%')
       }.padding(SpaceToken.lg).margin({ bottom: 80 })
     }.layoutWeight(1)
   }
@@ -970,10 +997,10 @@ struct Index {
       Column() {
         this.HeaderBar()
         Tabs({ barPosition: BarPosition.End }) {
-          TabContent() { this.DashboardPanel() }.tabBar('联动台')
-          TabContent() { this.RulePanel() }.tabBar('规则')
-          TabContent() { this.ScenePanel() }.tabBar('演练')
-          TabContent() { this.LogPanel() }.tabBar('日志')
+          TabContent() { this.DashboardPanel() }.tabBar(this.TabCell('联动台', '◉', 0))
+          TabContent() { this.RulePanel() }.tabBar(this.TabCell('规则', '▤', 1))
+          TabContent() { this.ScenePanel() }.tabBar(this.TabCell('演练', '▶', 2))
+          TabContent() { this.LogPanel() }.tabBar(this.TabCell('日志', '▦', 3))
         }
         .barHeight(58)
         .layoutWeight(1)
