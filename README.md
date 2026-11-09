@@ -55,22 +55,6 @@
 | 徐豪 [@sober-free](https://github.com/sober-free) | 业务与集成：规则引擎、场景与持久化结构、跨模块集成、文档体系 | `RuleEngine.ts` / `DefaultData.ts` / `DormStore.ets` / `StorageService.ets`；6 条默认规则与 4 组场景；Node 20 条 + ohosTest 14 条用例；需求 / 技术 / 设计 / 录屏文档 |
 | 钱志刚 [@qianzhigang-free](https://github.com/qianzhigang-free) | 交互与验证：设备控制增强、列表与详情交互、运行证据、独立测试复核 | 设备定时倒计时（T1）、规则一键复制（T2）、日志拦截筛选（T3）、协作 3 条用例（T4）、模拟器验收截图与测试日志复核（T5）；米家式信息架构改版（分组卡片 + 行式列表 + 列表→详情→操作三段式） |
 
-### `qianzhigang-free` 的提交记录（9 次）
-
-| 类型 | 内容 |
-| --- | --- |
-| `feat(ui)` | 设备详情页定时关闭倒计时、规则卡片复制、日志「只看拦截」筛选，并修复定时器未清理 |
-| `test` | 新增 3 条协作用例（正常 / 边界 / 异常各 1 条，直接 import 产品源码） |
-| `docs` | 补录协作测试与编译验证输出（23 pass / 0 fail，BUILD SUCCESSFUL） |
-| `fix(ui)` | 修复 `timerActive()` 短路导致 @State 依赖丢失、设定定时后界面不刷新 |
-| `docs` | 补录 T1–T3 模拟器验收截图与 README 清单 |
-| `style(design)` | 米家风格配色 v2：降饱和橙 + 中性灰 + 卡片轻投影 + 开关/按钮对比度修复 |
-| `style(layout)` | 按米家信息架构重排四个页签（分组小标题 + 单卡多行列表） |
-| `feat(rule)` | 规则详情页（列表→详情→操作）+ 首页场景化建议文案 |
-| `style(device)` | 设备详情页统一为「概览 + 参数 + 定时 + 信息 + 操作」分组列表 |
-
-T1–T5 的改动点与验收标准见 [`docs/协作任务清单.md`](docs/协作任务清单.md)。
-
 ## 4. 开发环境
 
 | 项目 | 版本/说明 |
@@ -114,9 +98,6 @@ dormlink-harmony/
 ├── screenshots/                    运行截图与录屏存放目录（由本人实机补录）
 └── build-profile.json5 / hvigorfile.ts / oh-package.json5
 ```
-
-★ 标记核心实现模块。截至 2026-11-09，仓库共 **50 次提交**（`sober-free` 41 次、`qianzhigang-free` 9 次）：徐豪负责规则引擎、场景数据、持久化与文档体系；钱志刚负责设备控制增强、列表/详情交互改版、协作测试与运行证据。两人贡献明细见第 3 节。
-
 ## 6. 运行方法
 
 1. 打开 DevEco Studio → `File > Open`，选择本仓库根目录 `dormlink-harmony`。
