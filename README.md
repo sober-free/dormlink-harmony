@@ -103,13 +103,25 @@ dormlink-harmony/
 - 测试直接 import `entry/src/main/ets/engine/RuleEngine.ts`，即应用实际运行的那份源码，**没有另写模拟实现**。
 - 三类覆盖：正常 7 / 边界 5 / 异常 7（Node 侧），详见需求说明书第 7 节。
 
-## 7. 截图与运行录屏
+## 7. 运行截图与演示视频
 
-**诚实说明**：仓库中的 `系统架构图.png`、`业务流程图.png` 是设计示意图，不是应用运行截图。真实运行截图与录屏需要由本人在 DevEco Studio 模拟器/真机上补录，否则「运行效果」「项目演示」相关评分项缺少证据。
+在 DevEco Studio 的 **Huawei_Phone 模拟器（HarmonyOS 5.0.5 / API 17）** 上实际编译、安装、运行后采集，全部位于 [`screenshots/`](screenshots/)：
 
-- 待补录文件放入 `screenshots/`，命名与分镜脚本见 [`docs/运行与录屏指南.md`](docs/运行与录屏指南.md) 与 [`screenshots/README.md`](screenshots/README.md)。
-- 需补录的 8 张截图：联动台首页、规则列表、规则编辑弹层、S1 演练结果、S2 冲突提示、一键修复后结果、执行日志、重启后恢复提示。
-- 需补录 1 段完整录屏：按第 5 节第 4 步的验收顺序连续操作，包含"结束进程 → 重启 → 数据恢复"。
+| 文件 | 内容 |
+| --- | --- |
+| `01-dashboard.jpeg` | 联动台：环境调节、演练结果摘要、设备状态 |
+| `02-rule-list.jpeg` | 规则列表：6 条规则，R001 显示双条件 |
+| `03-rule-editor.jpeg` | 规则编辑器：条件行 + 动作行 + 优先级 |
+| `04-scene-s1.jpeg` | S1 夏夜归寝：触发 R001 → R002 |
+| `05-conflict-s2.jpeg` | S2 冲突提示：空调 R002 胜出、R005 被拦截 |
+| `06-conflict-fixed.jpeg` | 一键修复后：当前无控制冲突 |
+| `07-execution-log.jpeg` | 执行日志：#1~#5，含「已拦截」与设备 before→after |
+| `08-restore-after-restart.jpeg` | 结束进程重启后：已恢复存档 + 恢复提示 |
+| `demo-recording.mp4` | 演示视频（47 帧截帧合成，4 fps） |
+
+采集方式：`hvigorw.js assembleHap` 编译未签名 HAP → `hdc` 安装启动 → `uitest dumpLayout` + `uiInput` 驱动界面 → `snapshot_display` 截屏，完整命令与执行记录见 [`docs/运行与录屏指南.md`](docs/运行与录屏指南.md)。
+
+**诚实说明**：`demo-recording.mp4` 是模拟器连续截帧后合成的视频——该模拟器镜像不含系统录屏应用，官方录屏链路仅支持真机，故按替代方案产出。`docs/系统架构图.png`、`docs/业务流程图.png` 是设计示意图，不是运行截图。
 
 ## 8. 持久化与异常处理
 
