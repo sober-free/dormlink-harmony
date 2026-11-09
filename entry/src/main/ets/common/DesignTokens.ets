@@ -50,6 +50,14 @@ export class FontToken {
   static readonly body: number = 13;
   static readonly label: number = 12;
   static readonly caption: number = 11;
+  /** 环境摘要卡三列大数字 */
+  static readonly metric: number = 24;
+  /** 演练结果统计大数字 */
+  static readonly metricLg: number = 26;
+  /** 场景快捷入口图标字 */
+  static readonly icon: number = 17;
+  /** 顶部「设备在线」计数 */
+  static readonly count: number = 20;
 }
 
 /** 间距：4 基准 */

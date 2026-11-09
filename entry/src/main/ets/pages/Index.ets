@@ -675,7 +675,7 @@ struct Index {
   SceneShortcut(s: ScenePreset) {
     Column() {
       Text(this.sceneIcon(s.id))
-        .fontSize(17).fontColor(ColorToken.brand)
+        .fontSize(FontToken.icon).fontColor(ColorToken.brand)
         .width(40).height(40).textAlign(TextAlign.Center)
         .backgroundColor(ColorToken.accentSubtle).borderRadius(RadiusToken.pill)
       Text(s.name)
@@ -705,7 +705,7 @@ struct Index {
       }.alignItems(HorizontalAlign.Start).layoutWeight(1)
       Column() {
         Text(this.onlineCount().toString())
-          .fontSize(20).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+          .fontSize(FontToken.count).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
         Text('设备在线')
           .fontSize(FontToken.caption).fontColor(ColorToken.textSecondary)
       }.alignItems(HorizontalAlign.End)
@@ -853,7 +853,7 @@ struct Index {
       Column() {
         Row() {
           Text(this.env.temperature.toString())
-            .fontSize(24).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+            .fontSize(FontToken.metric).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
           Text('℃').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ left: 2, bottom: 3 })
         }.alignItems(VerticalAlign.Bottom)
         Text('温度').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
@@ -862,7 +862,7 @@ struct Index {
       Column() {
         Row() {
           Text(this.env.humidity.toString())
-            .fontSize(24).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+            .fontSize(FontToken.metric).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
           Text('%').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ left: 2, bottom: 3 })
         }.alignItems(VerticalAlign.Bottom)
         Text('湿度').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
@@ -871,7 +871,7 @@ struct Index {
       Column() {
         Row() {
           Text(this.env.illuminance.toString())
-            .fontSize(24).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+            .fontSize(FontToken.metric).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
           Text('lux').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ left: 2, bottom: 3 })
         }.alignItems(VerticalAlign.Bottom)
         Text('光照').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
@@ -943,17 +943,17 @@ struct Index {
           Row() {
             Column() {
               Text(this.triggered.length.toString())
-                .fontSize(26).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+                .fontSize(FontToken.metricLg).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
               Text('触发规则').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
             }.layoutWeight(1).alignItems(HorizontalAlign.Center)
             Column() {
               Text(this.executedCount.toString())
-                .fontSize(26).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
+                .fontSize(FontToken.metricLg).fontWeight(FontWeight.Medium).fontColor(ColorToken.textPrimary)
               Text('执行动作').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
             }.layoutWeight(1).alignItems(HorizontalAlign.Center)
             Column() {
               Text(this.blockedCount.toString())
-                .fontSize(26).fontWeight(FontWeight.Medium)
+                .fontSize(FontToken.metricLg).fontWeight(FontWeight.Medium)
                 .fontColor(this.blockedCount > 0 ? ColorToken.warning : ColorToken.textTertiary)
               Text('冲突拦截').fontSize(FontToken.caption).fontColor(ColorToken.textSecondary).margin({ top: 2 })
             }.layoutWeight(1).alignItems(HorizontalAlign.Center)
