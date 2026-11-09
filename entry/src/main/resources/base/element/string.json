@@ -1,0 +1,7 @@
+{
+  "string": [
+    { "name": "module_desc", "value": "智能宿舍自动化规则编排" },
+    { "name": "EntryAbility_desc", "value": "DormLink 主入口" },
+    { "name": "EntryAbility_label", "value": "DormLink" }
+  ]
+}

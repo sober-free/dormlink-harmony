@@ -1,0 +1,15 @@
+{
+  "modelVersion": "5.0.0",
+  "name": "dormlink",
+  "version": "1.0.0",
+  "description": "DormLink 智宿联动实验室 - HarmonyOS 智能宿舍自动化规则编排 App",
+  "main": "",
+  "author": "xuhao",
+  "license": "Apache-2.0",
+  "dependencies": {},
+  "devDependencies": {
+    "@ohos/hypium": "1.0.21",
+    "@ohos/hvigor": "5.0.0",
+    "@ohos/hvigor-ohos-plugin": "5.0.0"
+  }
+}
