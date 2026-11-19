@@ -11,9 +11,10 @@
 运行： python3 tools/fill_report_template.py
 """
 import os
+import sys
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from docx.text.paragraph import Paragraph
@@ -227,6 +228,9 @@ PLACEHOLDER = '【图待本人实机截图补录】拍摄清单与分镜见 docs
 
 
 def main():
+    global OUT
+    if len(sys.argv) > 1:
+        OUT = sys.argv[1]
     tpl = Document(TPL)
     doc = Document(TPL)
 
@@ -249,15 +253,15 @@ def main():
             tail = 48 - label_w - pad - value_w
             clear_runs(p)
             r0 = p.add_run(label)
-            set_font(r0, '宋体', 12)
+            set_font(r0, '宋体', 15)
             r1 = p.add_run(' ' * pad)
-            set_font(r1, '宋体', 12)
+            set_font(r1, '宋体', 15)
             r1.underline = True
             r2 = p.add_run(value)
-            set_font(r2, '宋体', 12)
+            set_font(r2, '宋体', 15)
             r2.underline = True
             r3 = p.add_run(' ' * max(tail, 0))
-            set_font(r3, '宋体', 12)
+            set_font(r3, '宋体', 15)
             r3.underline = True
 
     # 1.5) 封面「班    级」补齐下划线，使整行与其他字段等宽（48）
@@ -267,7 +271,7 @@ def main():
             need = 48 - width
             if need > 0:
                 r = p.add_run(' ' * need)
-                set_font(r, '宋体', 12)
+                set_font(r, '宋体', 15)
                 r.underline = True
             break
 
@@ -405,9 +409,58 @@ def main():
         for p in to_delete:
             p._p.getparent().remove(p._p)
 
+    # 4.8) 评分标准末节收尾：删掉多余空段，并把承载 sectPr 的空段压到 1pt，
+    #      避免表格排满一页后这两个空段溢出到下一页、形成一张白页
+    for p in list(doc.paragraphs):
+        if 'sectPr' not in p._p.xml or p.text.strip() or 'blip' in p._p.xml:
+            continue
+        prev = p._p.getprevious()
+        while prev is not None and prev.tag.endswith('}p'):
+            from docx.text.paragraph import Paragraph as _Para2
+            q = _Para2(prev, p._parent)
+            if q.text.strip() or 'sectPr' in prev.xml or 'blip' in prev.xml:
+                break
+            nxt = prev.getprevious()
+            prev.getparent().remove(prev)
+            prev = nxt
+        # 段落标记与 run 都设为 1pt，行距固定 1pt
+        p.paragraph_format.line_spacing = Pt(1)
+        p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(0)
+        pPr = p._p.get_or_add_pPr()
+        rPr = pPr.find(qn('w:rPr'))
+        if rPr is None:
+            rPr = OxmlElement('w:rPr')
+            pPr.append(rPr)
+        for tag in ('w:sz', 'w:szCs'):
+            el = rPr.find(qn(tag))
+            if el is None:
+                el = OxmlElement(tag)
+                rPr.append(el)
+            el.set(qn('w:val'), '2')
+
     # 4.9) 正文颜色统一为黑色：模板样式「填写提示蓝色」本身带 #0070C0，填完内容后不应保留蓝色
     body_style = doc.styles['填写提示蓝色']
     body_style.font.color.rgb = RGBColor(0x00, 0x00, 0x00)
+
+    # 4.95) 最终收尾：承载分节符的空段之前不允许再留空段（否则表格满页时会多出一张白页）
+    for p in list(doc.paragraphs):
+        if 'sectPr' not in p._p.xml:
+            continue
+        while True:
+            prev = p._p.getprevious()
+            if prev is None or not prev.tag.endswith('}p'):
+                break
+            from docx.text.paragraph import Paragraph as _P3
+            q = _P3(prev, p._parent)
+            if q.text.strip() or 'sectPr' in prev.xml or 'blip' in prev.xml:
+                break
+            prev.getparent().remove(prev)
+        p.paragraph_format.line_spacing = Pt(1)
+        p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(0)
 
     doc.save(OUT)
 
