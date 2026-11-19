@@ -246,18 +246,78 @@ def main():
     for p in doc.paragraphs:
         t = p.text.strip()
         if t.startswith('图2.1'):
-            insert_picture_after(p, ARCH, 15.5)
+            insert_picture_after(p, ARCH, 14.4)
         elif t.startswith('图3.1'):
             insert_picture_after(p, FLOW, 13.5)
         elif t.startswith('图6.1'):
-            insert_picture_after(p, SHOT_MAIN, 16.0)
+            insert_picture_after(p, SHOT_MAIN, 14.4)
         elif t.startswith('图6.2'):
             insert_picture_after(p, SHOT_RESTORE, 7.0)
+
+    # 4.4) 图3.1 题注与图片内容对齐（原「模块业务流程图」与图内「规则引擎业务流程图」不一致）
+    for p in doc.paragraphs:
+        if p.text.strip().startswith('图3.1'):
+            replace(p, '图3.1  规则引擎业务流程图')
+            break
+
+    # 4.5) 题注格式统一：编号后统一两个空格，中英文之间补空格
+    import re as _re
+    for p in doc.paragraphs:
+        t = p.text.strip()
+        m = _re.match(r'^(图|表)(\d+)\.(\d+)\s*(.+)$', t)
+        if not m or p.style.name != '图表标题五号':
+            continue
+        kind, a, b, title = m.group(1), m.group(2), m.group(3), m.group(4).strip()
+        title = _re.sub(r'(?<=[\u4e00-\u9fa5])(?=[A-Za-z])', ' ', title)
+        title = _re.sub(r'(?<=[A-Za-z])(?=[\u4e00-\u9fa5])', ' ', title)
+        want = '%s%s.%s  %s' % (kind, a, b, title)
+        if t != want:
+            replace(p, want)
 
     # 5) Git 提交记录表后的说明段落：补充完整历史说明
     for p in doc.paragraphs:
         if p.text.strip().startswith('个人贡献以GitHub实际代码变更'):
             replace(p, '上表列出本人承担的三条代表性主线提交。该表按「引擎 → 界面 → 测试」三条主线各取一次代表性提交，当时的用例总数为 33 条（Node 19 + hypium 14），后续随协作用例与回归用例补充至当前的 Node 23 条 + hypium 14 条，共 37 条；项目按「骨架 → 业务 → 持久化 → 界面 → 测试 → 设计文档 → 交付文档 → 维护」的真实开发顺序推进；两人均使用各自 GitHub 账号提交实际代码，个人贡献以 GitHub 上的实际代码变更与提交记录为准，提交号可在仓库历史中核对。')
+
+    # 4.55) 收掉分节末段前的多余空段，降低「表格撑满后多出一张白页」的概率
+    for p in list(doc.paragraphs):
+        if 'sectPr' not in p._p.xml or p.text.strip() or 'blip' in p._p.xml:
+            continue
+        prev = p._p.getprevious()
+        while prev is not None and prev.tag.endswith('}p'):
+            from docx.text.paragraph import Paragraph as _Para
+            q = _Para(prev, p._parent)
+            if q.text.strip() or 'blip' in prev.xml or 'sectPr' in prev.xml:
+                break
+            nxt = prev.getprevious()
+            prev.getparent().remove(prev)
+            prev = nxt
+
+    # 4.6) 清理模板遗留的空白页：评分标准末段之后有一个空分节（仅含空段落），会打印出一张白页
+    body = doc.element.body
+    ps = doc.paragraphs
+    empty_h1 = None
+    for i, p in enumerate(ps):
+        if p.style.name == 'Heading 1' and not p.text.strip() and 'sectPr' in p._p.xml:
+            empty_h1 = i
+            break
+    if empty_h1 is not None:
+        # 该空标题本身不再是标题，避免目录里出现空条目
+        ps[empty_h1].style = doc.styles['Normal']
+        # 向前找：紧邻的空段落 -> 上一节的 sectPr 段落
+        j = empty_h1 - 1
+        to_delete = []
+        while j >= 0 and not ps[j].text.strip():
+            if 'sectPr' in ps[j]._p.xml:
+                # 去掉这个分节符，使前一节吸收空白段
+                for el in ps[j]._p.findall('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}pPr'):
+                    for sp in el.findall('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}sectPr'):
+                        el.remove(sp)
+                break
+            to_delete.append(ps[j])
+            j -= 1
+        for p in to_delete:
+            p._p.getparent().remove(p._p)
 
     doc.save(OUT)
 

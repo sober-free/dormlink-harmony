@@ -77,7 +77,7 @@ def badge(d, y):
 def build_architecture():
     img = Image.new('RGB', (1400, 950), BG)
     d = ImageDraw.Draw(img)
-    d.text((60, 26), '图2.1  系统架构图 — DormLink 智宿联动实验室', font=FT, fill=TITLE)
+    d.text((60, 26), '系统架构图 — DormLink 智宿联动实验室', font=FT, fill=TITLE)
     d.text((60, 72), '★ 橙色标记 = 当前已实现并通过验证的模块',
            font=FS, fill=SUB)
 
@@ -113,7 +113,7 @@ def build_architecture():
             ['5 类设备 / 6 条规则 / 4 组场景', '环境量合法区间'], True)], 410, 100)
 
     layer(570, 760, '数据层 · 持久化与恢复 · viewmodel / repository',
-          [(80, 330, '★ DormStore.ets', ['AppSnapshot ↔ PersistedState', '恢复降级'], True),
+          [(80, 330, '★ DormStore.ets', ['AppSnapshot 与 PersistedState 互转', '恢复降级'], True),
            (430, 330, '★ StorageService.ets', ['Preferences put / flush', 'try-catch 安全降级'], True),
            (780, 330, 'Preferences 存储', ['dormlink_state', 'snapshot + saved_at'])], 640, 100)
 
@@ -137,7 +137,7 @@ def build_architecture():
 def build_flow():
     img = Image.new('RGB', (1200, 1200), BG)
     d = ImageDraw.Draw(img)
-    d.text((50, 24), '图3.1  规则引擎业务流程图（当前已实现的核心业务）', font=FT, fill=TITLE)
+    d.text((50, 24), '规则引擎业务流程图（当前已实现的核心业务）', font=FT, fill=TITLE)
     d.text((50, 68), '从用户操作到设备联动、冲突裁决、界面刷新与落盘的完整状态变化', font=FS, fill=SUB)
 
     def step(y, head, body, fill=BOX, outline=BOX_B):
