@@ -448,6 +448,9 @@ def main():
     for p in list(doc.paragraphs):
         if 'sectPr' not in p._p.xml:
             continue
+        if p.text.strip() or 'blip' in p._p.xml:
+            # 有文字的段落（如封面「开课时间」）不压缩，只处理纯空段
+            continue
         while True:
             prev = p._p.getprevious()
             if prev is None or not prev.tag.endswith('}p'):
@@ -461,6 +464,22 @@ def main():
         p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
         p.paragraph_format.space_before = Pt(0)
         p.paragraph_format.space_after = Pt(0)
+
+    # 4.97) 目录（sdt 内容控件）前不允许留空段：表格满页时该空段会溢出成一张白页，
+    #       而目录自身已设「段前分页」，删掉空段不影响分页
+    from lxml import etree as _et
+    _W = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+    for child in list(doc.element.body.iterchildren()):
+        if _et.QName(child).localname != 'sdt':
+            continue
+        prev = child.getprevious()
+        while prev is not None and _et.QName(prev).localname == 'p':
+            txt = ''.join(t.text or '' for t in prev.iter(_W + 't')).strip()
+            if txt or prev.find('.//' + _W + 'sectPr') is not None or prev.find('.//' + _W + 'drawing') is not None:
+                break
+            nxt = prev.getprevious()
+            prev.getparent().remove(prev)
+            prev = nxt
 
     doc.save(OUT)
 
