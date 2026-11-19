@@ -237,12 +237,39 @@ def main():
             for r in p.runs:
                 if '__23物联1/2' in r.text:
                     r.text = r.text.replace('__23物联1/2_____', '23物联1')
-        elif t.strip() == '学生姓名：':
-            r = p.add_run('        徐豪')
-            set_font(r, '宋体', 12)
-        elif t.strip() == '学    号：':
-            r = p.add_run('        20230313120')
-            set_font(r, '宋体', 12)
+        elif t.strip() == '学生姓名：' or t.strip() == '学    号：':
+            # 模板用「空格 + 下划线」做填写线：清空重建，使值与「学院/专业/班级」同列对齐、且横线等长
+            label = '     学生姓名：' if t.strip() == '学生姓名：' else '     学    号：'
+            value = '徐豪' if t.strip() == '学生姓名：' else '20230313120'
+            # 标签视觉宽 19，前置 9 空格后从第 28 列开始（与「班    级：」一致）
+            pad = 9
+            # 值 + 补白，使整行视觉宽 ≈ 48，与其他字段的下划线等长
+            label_w = sum(2 if ord(c) > 127 else 1 for c in label)
+            value_w = sum(2 if ord(c) > 127 else 1 for c in value)
+            tail = 48 - label_w - pad - value_w
+            clear_runs(p)
+            r0 = p.add_run(label)
+            set_font(r0, '宋体', 12)
+            r1 = p.add_run(' ' * pad)
+            set_font(r1, '宋体', 12)
+            r1.underline = True
+            r2 = p.add_run(value)
+            set_font(r2, '宋体', 12)
+            r2.underline = True
+            r3 = p.add_run(' ' * max(tail, 0))
+            set_font(r3, '宋体', 12)
+            r3.underline = True
+
+    # 1.5) 封面「班    级」补齐下划线，使整行与其他字段等宽（48）
+    for p in doc.paragraphs[:16]:
+        if p.text.strip().startswith('班    级：'):
+            width = sum(2 if ord(c) > 127 else 1 for c in p.text)
+            need = 48 - width
+            if need > 0:
+                r = p.add_run(' ' * need)
+                set_font(r, '宋体', 12)
+                r.underline = True
+            break
 
     # 2) 正文 15 个【填写提示】段落按出现顺序替换
     hints = [p for p in doc.paragraphs if p.text.strip().startswith('【填写提示】')]
