@@ -72,6 +72,22 @@ def fill_data_rows(t, rows, size=9):
             set_font(r, '宋体', size)
 
 
+def replace_multi(p, texts):
+    """把多段文字写入同一位置：首段沿用原段落，其余按顺序插入其后（继承样式与首行缩进）。"""
+    replace(p, texts[0])
+    cur = p
+    for t in texts[1:]:
+        np = insert_after(cur)
+        np.style = p.style
+        np.paragraph_format.first_line_indent = p.paragraph_format.first_line_indent
+        np.paragraph_format.space_before = p.paragraph_format.space_before
+        np.paragraph_format.space_after = p.paragraph_format.space_after
+        r = np.add_run(t)
+        set_font(r, '宋体', 10.5)
+        cur = np
+    return cur
+
+
 def insert_after(paragraph):
     new_p = OxmlElement('w:p')
     paragraph._p.addnext(new_p)
@@ -142,7 +158,9 @@ HINTS = [
     """以「用户新增的规则」这一代表性数据为例：在规则编辑器保存时，Index.saveDraft() 更新 @State rules，随后 runOnce() 触发 DormStore.persist()；DormStore 把 environment、devices、rules、最近 50 条 records 与 conflicts 组装成 PersistedState，serializeState 生成 JSON 字符串，StorageService.save() 执行 put 与 flush 后立即落盘。结束应用进程后重新打开，Index.aboutToAppear() 调用 DormStore.restore()：先 getPreferences，再 load 取出字符串，deserializeState 还原对象，校验 devices 与 rules（逐条 validateRule），通过后 applySnapshot 回填全部 @State。若存储初始化失败、无存档或 JSON 损坏，则安全回退默认方案并在界面显示具体原因，不会出现白屏或崩溃。集成验证方面，Node 侧异常用例断言存档字符串可 round-trip 且损坏 JSON 返回 null，边界用例断言 4 组场景重复执行终态一致，DevEco 侧 ohosTest 覆盖同一逻辑。结束进程并重新打开后的界面见图 6.2：顶部显示「已恢复存档」，并提示已从 Preferences 恢复规则、设备状态与最近 4 条执行记录，环境量与设备状态与关闭前完全一致。""",
 
     # 15 个人总结
-    """这次开发里让我停下来查资料的，是一个看起来很小的疑问：规则引擎到底该不该写成纯逻辑模块。最初的写法把条件判定直接塞在 ArkUI 组件的方法里，结果单元测试必须启动整个页面才能跑；而 ArkTS 又在编译期禁止 any、对象展开和若干 TypeScript 运行时语法，我一度想用动态对象绕过类型检查。为了判断这两条路，我先查了华为官方《初识 ArkTS 语言》（https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-get-started）与《从 TypeScript 到 ArkTS 的适配规则》（https://device.harmonyos.com/cn/docs/apiref/harmonyos-guides/typescript-to-arkts-migration-guide）：前者说明 ArkTS 自 API version 10 起通过规范强化静态检查以提升运行稳定性与性能，后者具体列出被限制的 TS 特性并给出重构建议。两份资料结论一致——绕过静态检查不是可行方向，按规范重构才是。于是我把引擎拆成只用 interface / type / 普通函数、不 import 任何 HarmonyOS API 的 RuleEngine.ts，并据此选择可执行测试的方案：又核对了 Node.js 官方《Modules: TypeScript》（https://nodejs.org/download/release/v22.12.0/docs/api/typescript.html，注明 type stripping 自 v22.6.0 起提供）与 22.18.0 LTS 发布说明（https://nodejs.org/uk/blog/release/v22.18.0，默认启用该能力），确认本机 Node 22.22.2 可以直接加载 .ts 源码。最终测试文件直接 import 工程真实源码，主用例一次跑通（后续与钱志刚的 3 条协作用例合并后共 23 条），这比另写一份模拟实现更有说服力，也是我舍弃「为测试再抄一份逻辑」这一做法的理由。\n对鸿蒙新技术的认识，我选的是本项目中真正用到了的 @kit.ArkData 用户首选项（Preferences）。查证的官方资料是《@ohos.data.preferences（用户首选项）》API 参考（https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-data-preferences）与《通过用户首选项实现数据持久化 (ArkTS)》（https://device.harmonyos.com/cn/docs/apiref/harmonyos-guides/data-persistence-by-preferences）：它提供 Key-Value 型轻量持久化，值可为数字、字符串、布尔、数组、Uint8Array、object 或 bigint，数据文件位于 preferencesDir，导入方式为 import { preferences } from \"@kit.ArkData\"；指南还说明默认使用 XML 存储模式，自 API version 18 起新增 GSKV 存储模式并需先用 isStorageTypeSupported() 判断平台支持情况。用途上，它适合配置、规则、小型状态快照这类「整体读写、按键取值」的数据，本项目 6 条规则加 50 条日志正好落在这一区间，所以我用它而不是关系型数据库。局限也很清楚：它是单应用内的轻量键值存储，不支持复杂关系查询与大数据量，多个键的写入需要自行保证一致性（本项目因此采用单个 snapshot 键一次 flush 的方案），跨设备同步与分布式能力属于其他数据管理能力；另外存储模式与可用 API 随版本变化，API 18 才引入 GSKV，代码不能假定所有设备都支持。这些判断都来自上述官方文档，而不是泛泛的印象。\n接下来我打算专门补一块「数据层选型的版本跟随」学习任务：以 HarmonyOS API 18 的 GSKV 存储模式与关系型数据库（RDB）为对象，先用官方 Release Notes 与 ArkData 指南核对各能力的起始 API 版本和适用设备范围，再在 DevEco Studio 里查看本机 SDK 的 API 版本，写一个最小 demo 分别用 Preferences 与 RDB 存取同一份规则数据并对比读写耗时与代码量，最后用一组单元测试验证「不支持 GSKV 的设备上调用 isStorageTypeSupported() 后能正确回退」。成效是否达成，我用三条可验证的标准判断：能准确说出每个能力的最低 API 版本、demo 能在指定模拟器上编译运行、回退路径有对应测试断言通过。资料核查会继续以华为开发者官网文档与对应版本的 API 参考为主，辅以 OpenHarmony 开源仓库的实现说明交叉验证，而不是只看二手博客——这次写报告时我已经吃过一次亏：搜索到的第三方文章对「Preferences 是否支持跨设备同步」说法不一，最后还是回到官方 API 参考才确认边界。""",
+    """这次开发里让我停下来查资料的，是一个看起来很小的疑问：规则引擎到底该不该写成纯逻辑模块。最初的写法把条件判定直接塞在 ArkUI 组件的方法里，结果单元测试必须启动整个页面才能跑；而 ArkTS 又在编译期禁止 any、对象展开和若干 TypeScript 运行时语法，我一度想用动态对象绕过类型检查。为了判断这两条路，我先查了华为官方《初识 ArkTS 语言》[1] 与《从 TypeScript 到 ArkTS 的适配规则》[2]：前者说明 ArkTS 自 API version 10 起通过规范强化静态检查以提升运行稳定性与性能，后者具体列出被限制的 TS 特性并给出重构建议。两份资料结论一致——绕过静态检查不是可行方向，按规范重构才是。于是我把引擎拆成只用 interface / type / 普通函数、不 import 任何 HarmonyOS API 的 RuleEngine.ts，并据此选择可执行测试的方案：又核对了 Node.js 官方《Modules: TypeScript》[3]（注明 type stripping 自 v22.6.0 起提供）与 22.18.0 LTS 发布说明[4]（默认启用该能力），确认本机 Node 22.22.2 可以直接加载 .ts 源码。最终测试文件直接 import 工程真实源码，主用例一次跑通（后续与钱志刚的 3 条协作用例合并后共 23 条），这比另写一份模拟实现更有说服力，也是我舍弃「为测试再抄一份逻辑」这一做法的理由。
+对鸿蒙新技术的认识，我选的是本项目中真正用到了的 @kit.ArkData 用户首选项（Preferences）。查证的官方资料是《@ohos.data.preferences（用户首选项）》API 参考[5] 与《通过用户首选项实现数据持久化（ArkTS）》[6]：它提供 Key-Value 型轻量持久化，值可为数字、字符串、布尔、数组、Uint8Array、object 或 bigint，数据文件位于 preferencesDir，导入方式为 import { preferences } from \"@kit.ArkData\"；指南还说明默认使用 XML 存储模式，自 API version 18 起新增 GSKV 存储模式并需先用 isStorageTypeSupported() 判断平台支持情况。用途上，它适合配置、规则、小型状态快照这类「整体读写、按键取值」的数据，本项目 6 条规则加 50 条日志正好落在这一区间，所以我用它而不是关系型数据库。局限也很清楚：它是单应用内的轻量键值存储，不支持复杂关系查询与大数据量，多个键的写入需要自行保证一致性（本项目因此采用单个 snapshot 键一次 flush 的方案），跨设备同步与分布式能力属于其他数据管理能力；另外存储模式与可用 API 随版本变化，API 18 才引入 GSKV，代码不能假定所有设备都支持。这些判断都来自上述官方文档，而不是泛泛的印象。
+接下来我打算专门补一块「数据层选型的版本跟随」学习任务：以 HarmonyOS API 18 的 GSKV 存储模式与关系型数据库（RDB）为对象，先用官方 Release Notes 与 ArkData 指南核对各能力的起始 API 版本和适用设备范围，再在 DevEco Studio 里查看本机 SDK 的 API 版本，写一个最小 demo 分别用 Preferences 与 RDB 存取同一份规则数据并对比读写耗时与代码量，最后用一组单元测试验证「不支持 GSKV 的设备上调用 isStorageTypeSupported() 后能正确回退」。成效是否达成，我用三条可验证的标准判断：能准确说出每个能力的最低 API 版本、demo 能在指定模拟器上编译运行、回退路径有对应测试断言通过。资料核查会继续以华为开发者官网文档与对应版本的 API 参考为主，辅以 OpenHarmony 开源仓库的实现说明交叉验证，而不是只看二手博客——这次写报告时我已经吃过一次亏：搜索到的第三方文章对「Preferences 是否支持跨设备同步」说法不一，最后还是回到官方 API 参考才确认边界。""",
 ]
 
 CODE_EXPLAIN = """最能代表本人工作的是规则引擎中的冲突裁决与执行记录部分，位于 entry/src/main/ets/engine/RuleEngine.ts 的 evaluate() 方法（对应提交 1c14416）。它解决的问题是：当多条规则同时命中并争用同一台设备时，如何让优先级真正生效，同时把「谁被采纳、谁被拦截」变成可查证的日志，而不是静默覆盖。实现思路是先把命中规则按优先级排好序，再以 deviceId 为键维护一张「通道占用表」；排序保证第一个写入该设备的规则一定是优先级最高的，后续规则若发现通道已占用，就不再写设备状态，而是生成冲突记录与 blocked 记录，然后 continue 继续处理该规则的其他动作。实际效果：载入 S2（31℃、无人）时日志显示 R002 胜出、空调保持开启，R005 的空调动作被拦截，但 R005 对主灯和风扇的关闭动作仍正常执行；点击「一键修复」为 R002 补充「在室=有人」条件后，无人场景 R002 不再命中，冲突数归零。关键片段如下（为报告展示做了省略，完整实现以仓库源码为准）：\n"""
@@ -229,18 +247,59 @@ def main():
     # 2) 正文 15 个【填写提示】段落按出现顺序替换
     hints = [p for p in doc.paragraphs if p.text.strip().startswith('【填写提示】')]
     assert len(hints) == 15, '模板填写提示段落数应为 15，实际 %d' % len(hints)
+    last_par = None
     for i, p in enumerate(hints):
         if i == 7:  # 核心代码：说明 + 代码混排
             replace_parts(p, [
                 (CODE_EXPLAIN, '宋体', 10.5, None),
                 (CODE_BLOCK, 'Consolas', 8.0, None),
             ])
+            last_par = p
+        elif i == 14:  # 个人总结：拆成三个自然段
+            last_par = replace_multi(p, [x for x in HINTS[i].split('\n') if x.strip()])
         else:
             replace(p, HINTS[i])
+            last_par = p
 
     # 3) 表格：仅替换数据行，行数 / 表头 / 边框全部不变
     for idx, rows in TABLE_ROWS.items():
         fill_data_rows(doc.tables[idx], rows, size=8.5 if idx in (6, 7, 9) else 9)
+
+    # 3.5) 个人总结后补「参考资料」：URL 单独成行，避免长串在正文里断行难看
+    REFS = [
+        ('[1] 华为开发者联盟. 初识 ArkTS 语言',
+         'https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-get-started'),
+        ('[2] 华为开发者联盟. 从 TypeScript 到 ArkTS 的适配规则',
+         'https://device.harmonyos.com/cn/docs/apiref/harmonyos-guides/typescript-to-arkts-migration-guide'),
+        ('[3] Node.js. Modules: TypeScript（v22.12.0 文档）',
+         'https://nodejs.org/download/release/v22.12.0/docs/api/typescript.html'),
+        ('[4] Node.js. Node.js 22.18.0 LTS Release Notes',
+         'https://nodejs.org/uk/blog/release/v22.18.0'),
+        ('[5] 华为开发者联盟. @ohos.data.preferences（用户首选项）API 参考',
+         'https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-data-preferences'),
+        ('[6] 华为开发者联盟. 通过用户首选项实现数据持久化（ArkTS）',
+         'https://device.harmonyos.com/cn/docs/apiref/harmonyos-guides/data-persistence-by-preferences'),
+    ]
+    if last_par is not None:
+        title = insert_after(last_par)
+        title.paragraph_format.space_before = Pt(10)
+        title.paragraph_format.space_after = Pt(4)
+        r = title.add_run('参考资料')
+        set_font(r, '宋体', 10.5, bold=True)
+        cur = title
+        for name, url in REFS:
+            np = insert_after(cur)
+            np.paragraph_format.space_before = Pt(0)
+            np.paragraph_format.space_after = Pt(0)
+            r1 = np.add_run(name)
+            set_font(r1, '宋体', 9)
+            np2 = insert_after(np)
+            np2.paragraph_format.space_before = Pt(0)
+            np2.paragraph_format.space_after = Pt(2)
+            np2.paragraph_format.left_indent = Cm(0.6)
+            r2 = np2.add_run(url)
+            set_font(r2, 'Times New Roman', 8)
+            cur = np2
 
     # 4) 图题后插入图片或补录占位（图题段落本身保留）
     for p in doc.paragraphs:
@@ -318,6 +377,10 @@ def main():
             j -= 1
         for p in to_delete:
             p._p.getparent().remove(p._p)
+
+    # 4.9) 正文颜色统一为黑色：模板样式「填写提示蓝色」本身带 #0070C0，填完内容后不应保留蓝色
+    body_style = doc.styles['填写提示蓝色']
+    body_style.font.color.rgb = RGBColor(0x00, 0x00, 0x00)
 
     doc.save(OUT)
 
